@@ -3,6 +3,8 @@
 	"displayName": "easy-extensibility",
 	"description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
 	"version": "0.0.1",
+	"repository": "https://github.com/alhassy/easy-extensibility",
+	"publisher": "alhassy",
 	"engines": {
 		"vscode": "^1.68.0"
 	},

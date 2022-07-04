@@ -12,6 +12,22 @@ For example if there is an image subfolder under your extension project workspac
 
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
+There is essentially only one step (⭐) to making an extension.
+🤗 Sharing an extension, such as a tiny 5-line command, should be as easy as having that defintion code readily available.
+
+In constrast, the default approach to making a VSCode extension is as follows:
+1. 😱 Make a new NodeJS project, say with `yo code` as per https://code.visualstudio.com/api/get-started/your-first-extension
+2. ⭐ Actually write your extension's code
+3. 😱 Run your code in a dedicated sandbox with `F5`, far from your code
+4. 😱 Try your extension; stop the sandbox; alter your code; repeat.
+5. Now to actually make use of your extension, you should pacakge it with `vsce package`
+   - To share it with others, you'll need to:
+      0. 😱 Make a Microsoft account
+      1. 😱 Make a new Azure organisation, as in https://dev.azure.com/alhassy      
+      2. 😱 Create a Personal Access Token for use in the extension marketplace; as per https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+
+This approach doesn't encourage making extensions ---since there's so much ceremony--- and it, likewise, doesn't encourage sharing/packaging up the resulting (tiny) extensions.
+
 ## Development
 
 0. `cd ~/easy-extensibility; npm ci`
