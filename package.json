@@ -12,14 +12,34 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:easy-extensibility.helloWorld"
+		"onStartupFinished",
+		"onCommand:easy-extensibility.evaluateSelection",
+		"onCommand:easy-extensibility.executeRegisteredCommand"
 	],
 	"main": "./extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "easy-extensibility.helloWorld",
-				"title": "Hello World"
+				"command": "easy-extensibility.evaluateSelection",
+				"title": "Evaluate Selected Region"
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"title": "Execute Registered Command"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "easy-extensibility.evaluateSelection",
+				"key": "ctrl+e",
+				"mac": "cmd+e",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"key": "ctrl+h",
+				"mac": "cmd+h",
+				"when": "editorTextFocus"
 			}
 		]
 	},
