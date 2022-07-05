@@ -159,6 +159,18 @@ E.currentFileName = () => vscode.window.activeTextEditor.document.fileName
  */
 E.shell = require('util').promisify(require('child_process').exec)
 
+/** Create a new terminal, within VSCode, that runs the given string command `cmd`.
+ *  Title the resulting terminal with the given `title` string.
+ *
+ *  Result value is of type `vscode.Terminal`.
+ */
+E.terminal = (cmd, title = cmd) => {
+  let t = vscode.window.createTerminal(title)
+  t.sendText(cmd)
+  t.show(true) // Ensure terminal is showing, but don't force focus to jump here!
+  return t
+}
+
 // Toggles ================================================================================
 
 /** Executes the command denoted by the given command identifier.
@@ -279,6 +291,13 @@ E.toggle = {
  */
 E.findFile = path => E.shell(`code ${path}`)
 
+commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => {
+  E.shell(
+    'rm ~/Downloads/tutorial.js; curl -o ~/Downloads/tutorial.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/tutorial.js'
+  )
+  E.findFile('~/tutorial.js')
+}
+
 commands["Find user's ~/init.js file, or provide a template"] = E =>
   E.shell('file ~/init.js').then(resp => {
     if (resp.stdout.includes('cannot open'))
@@ -344,12 +363,11 @@ function activate(context) {
         commands[result.name] = result
         E.internal.echoFunction(result.name, 'function')
         return
-      } 
-	  else if (text.includes('await ')) result = eval(`(async () => { ${text} })()`)
+      } else if (text.includes('await ')) result = eval(`(async () => { ${text} })()`)
       else result = eval(text)
 
-	  // Don't bother echoing void output.
-	  if(text.includes('E.message') || text.includes('E.insert')) return;
+      // Don't bother echoing void output.
+      if (text.includes('E.message') || text.includes('E.insert')) return
 
       E.internal.echoFunction(result)
     })

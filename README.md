@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- logo=Gnu-Emacs  ~~~ a nice big `E` ;-) !-->
-<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.0.0-informational?logo=javascript"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.1.1-informational?logo=javascript"></a>
 
 <span>    
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GNU_3-informational?logo=read-the-docs"></a>
@@ -18,15 +18,15 @@
 
 Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!
 
-## TODO Features
+## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+<!-- Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
 
 For example if there is an image subfolder under your extension project workspace:
 
 \!\[feature X\]\(images/feature-x.png\)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow. -->
 
 There is essentially only one step (⭐) to making an extension.
 🤗 Sharing an extension, such as a tiny 5-line command, should be as easy as having that defintion code readily available.
@@ -46,16 +46,21 @@ This approach doesn't encourage making extensions ---since there's so much cerem
 
 ## Development
 
+0. `cd ~; git clone https://github.com/alhassy/easy-extensibility`
 0. `cd ~/easy-extensibility; npm ci`
 1. `code ~/easy-extensibility`
 2. `F5`
-3. In the new VSCode instance, `Cmd+Shift+P` then `Hello World` to see things run.
-
+3. Open a new `~/scratch.js` file
+4. Enter some JavaScript, such as `2 + 4`, then press `cmd+e` to see its resulting evaluation.
+5. Now enter more interesting code that *alters the look and feel of VSCode*, such as 
+   `E.toggle.linenumbers()` and press `cmd+e` to execute it and see things change!
+<!-- 3. In the new VSCode instance, `Cmd+Shift+P` then `Hello World` to see things run.
+ -->
 ## TODO Requirements
 
 If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
-## TODO Extension Settings
+<!-- ## TODO Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
 
@@ -69,24 +74,25 @@ This extension contributes the following settings:
 ## TODO Known Issues
 
 Calling out known issues can help limit users opening duplicate issues against your extension.
-
+ -->
 ## TODO Release Notes
 
-Users appreciate release notes as you update your extension.
-
+<!-- Users appreciate release notes as you update your extension.
 
 All notable changes to the "easy-extensibility" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+ -->
+### 0.0.1 Hello, World!
 
-### 1.0.0
+Initial release; provides the `Hello World` command from the `cmd+shift+P` pallet.
 
-Initial release of ...
+### 1.1.1 Next, finish drawing the rest of the owl!
 
-### 1.0.1
+- New keybinding: `cmd+E` to evaluate a selection of JavaScript, or the entirety of the current line.
+- New keybinding: `cmd+H` to provide a command pallet for user-defined commands using this extension.
+- The *easy-extensibility Extension API*, or “E API”, which acts as a high-level user-friendly alterative to the default *vscode Extension API*.
 
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Also,
+- To learn about “saving reusable functions and having them load automatically”, please invoke `cmd+h find users init.js file, or provide a template`
+- Open the tutorial to learn more about using `cmd+E` by invoking `cmd+h tutorial`

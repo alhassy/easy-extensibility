@@ -38,10 +38,17 @@ E.message(welcome, button)
 
 // But first, let's make a super tiny (but, for me, super useful) command to see things in action!
 commands['Enclose selection in unicode quotes'] = E => E.replaceSelectionBy(str => `“${str}”`)
-
+//
 // Now run:  cmd+h reload user's init.js file RETURN
 // Then type some text, select it, cmd+h enclose selection in unicode quotes RETURN
 
+// Then another tiny command, to get comfortable with this setup.
+commands['Make me smile!'] = E => E.terminal('fortune | cowsay | lolcat')
+//
+// Now run:  cmd+h reload user's init.js file RETURN cmd+h make me smile RETURN
+
+// Finally, let's get to a slightly more JavaScripty command:
+//
 {
   // Example usage:  E.message( bannerComment("hiya, amigo, and friends!") )
   function bannerComment(str, style = '=') {
