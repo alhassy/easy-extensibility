@@ -3,7 +3,7 @@
 // ==================================================================================
 
 // Everything in this file, this JS program, is run whenever you open VSCode.
-// (Assuming you have the `easy-extensibility` pacakge installed of-course!)
+// (Assuming you have the `easy-extensibility` package installed of-course!)
 //
 // This is useful for adding your own snippets, useful commands, to the `cmd+h` command pallet
 // or for configuring VSCode depending on the workspace, date, machine, etc.
@@ -31,7 +31,7 @@ E.message(welcome, button)
 // entire init.js file in an ambient async IIFE.
 
 // ========================================  ========================================
-// ============= Let's add a new command to the `cmd+h` command pallete. ============
+// ============= Let's add a new command to the `cmd+h` command pallet. ============
 // ========================================  ========================================
 
 // Let's add the command that let's me make the above "banner-style comments" 😉
@@ -47,7 +47,31 @@ commands['Make me smile!'] = E => E.terminal('fortune | cowsay | lolcat')
 //
 // Now run:  cmd+h reload user's init.js file RETURN cmd+h make me smile RETURN
 
-// Finally, let's get to a slightly more JavaScripty command:
+// Of-course, after I see what makes me smile, I'd like to simple select it and have an image
+// that I can share with my colleagues; e.g., on Slack. So let's make a utility to do just that!
+
+/** Interactively capture screen and save to clipboard; then paste in Slack, etc, with ⌘-c
+ * 
+ * After we run this command, we can swipe up on mousepad to select different desktops, then
+ * click & drag to select portition of screen to capture.
+
+ * Captured screen is NOT saved to disk, only copied to clipboard.
+
+ * In MacOs,
+ *  - Command + Shift + 5  ⇒  Select screen record
+ *  - Command + Shift + 4  ⇒  Selection Screenshot
+ *  - Command + Shift + 3  ⇒  Screenshot
+ * 
+ * Unlike the second option above,
+ * 1. this command saves things to clipboard, and
+ * 2. does not litter my desktop (or anywhere else) with screenshots that I doubt I'll need in the future.
+ * 
+ * See: https://osxdaily.com/2011/08/11/take-screen-shots-terminal-mac-os-x
+ */
+commands['screencapture: Interactively capture screen and save to clipboard; then paste with ⌘-c'] = E =>
+  E.shell('screencapture -i -c')
+
+// Anyhow, finally, let's get to a slightly more JavaScripty command:
 //
 {
   // Example usage:  E.message( bannerComment("hiya, amigo, and friends!") )
@@ -64,4 +88,33 @@ commands['Make me smile!'] = E => E.terminal('fortune | cowsay | lolcat')
 // Now run:  cmd+h reload user's init.js file RETURN
 // Then type some text, select it, cmd+h make selection into a banner comment RETURN
 
-// ========================================  ========================================
+// ==================================================================================
+// ============= Extension: Quickly Jumping to Favorited Webpages/Videos ============
+// ==================================================================================
+
+// Often, there are a number of Youtube videos, or webpages, that I'd like to jump
+// to quickly. I'd like to have that menu of items be right here in my editor.
+// So, let's make some commands to do just that!
+
+{
+  /** Browse to a given `url` string, using the OS default browser.
+   * #### Example Usage
+   * ```
+   * browseURL("www.icanhazdadjoke.com")
+   * ```
+   */
+  const browseURL = url => E.shell(`open ${url.startsWith('http') ? '' : 'http://'}${url}`)
+
+  commands["Youtube ~ Background audio while I'm working"] = async E => {
+    let options = { placeHolder: 'What do you want to listen to?' }
+    let videos = {
+      'Daily Supplications': 'https://youtu.be/9m9yE7qtq5w',
+      'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',
+      'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',
+      'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts',
+      'ASMR ~ Vancouver Cafe': 'https://youtu.be/7sg-dfYLGRQ'
+    }
+    const choice = await vscode.window.showQuickPick(Object.keys(videos), options)
+    browseURL(videos[choice])
+  }
+}

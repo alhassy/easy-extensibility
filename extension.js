@@ -231,14 +231,14 @@ E.toggle = {
   editors: () => E.executeCommand('workbench.action.toggleEditorVisibility'),
 
   /** Example usage:  `E.toggle.sidebar(true); E.toggle.sidebar()`  where the first moves position, then the second makes it visible. */
-  sidebar: presenceOrPosition =>
+  sideBar: presenceOrPosition =>
     E.executeCommand(`workbench.action.toggleSidebar${presenceOrPosition ? 'Position' : 'Visibility'}`),
 
   /** Show the bottom-most mode-line, which displays things like line-number, branch name, etc? */
-  statusbar: () => E.executeCommand('workbench.action.toggleStatusbarVisibility'),
+  statusBar: () => E.executeCommand('workbench.action.toggleStatusbarVisibility'),
 
   /** Toggle the visibility of the left-most panel; which mentions `Source Control`, `Extensions`, etc. */
-  activitybar: () => E.executeCommand('workbench.action.toggleActivityBarVisibility'),
+  activityBar: () => E.executeCommand('workbench.action.toggleActivityBarVisibility'),
 
   // Hide tabs; navigate between tabs via C-x <-/->
   tabs: () => E.executeCommand('workbench.action.toggleTabsVisibility'),
@@ -295,7 +295,7 @@ commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => 
   E.shell(
     'rm ~/Downloads/tutorial.js; curl -o ~/Downloads/tutorial.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/tutorial.js'
   )
-  E.findFile('~/tutorial.js')
+  E.findFile('~/Downloads/tutorial.js')
 }
 
 commands["Find user's ~/init.js file, or provide a template"] = E =>

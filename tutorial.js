@@ -6,15 +6,20 @@
 
 // Type the following in *ANY EDITOR* window, then press cmd+e to see things changing live!
 
-E.toggle('ScreencastMode') // Show's every key I press, for onlookers! So neato!
-editor.options.lineNumbers =  1 // Show line numbers? 0 = off; 1 = on; 2 = relative
+E.toggle.screencast() // Show's every key I press, for onlookers! So neato!
+editor.options.lineNumbers = 1 // Show line numbers? 0 = off; 1 = on; 2 = relative
 editor.options.cursorStyle = 2 // 1 thick line; 2 filled block; 3 underline; 4 thin line; 5 block outline; 6 thin underline
 
 // Using the default low-level vscode API
 vscode.commands.executeCommand('breadcrumbs.toggle')
 
 // Using the new “E API”: Let's make VSCode super minimal.
-E.toggle.panel(); E.toggle.sidebar(); E.toggle.activitybar(); E.toggle.breadcrumbs(); E.toggle.tabs(); E.toggle.linenumbers()
+E.toggle.panel()
+E.toggle.sideBar()
+E.toggle.activityBar()
+E.toggle.breadcrumbs()
+E.toggle.tabs()
+E.toggle.lineNumbers()
 
 // No more messing with configs, or making full-on extensions, just to try things out!
 
