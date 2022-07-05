@@ -15,6 +15,9 @@
 
 // Below are sample fragments to help you get started; all the best!
 
+// It is encouraged to keep this file under version control, then make a symbolic link;
+// e.g.,   ln -s ~/my-cool-repo/init.js ~/init.js
+
 // ==================================================================================
 // ========= 🚀 Whenever we open VSCode, let's see a motivating message! 💪 ==========
 // ==================================================================================
