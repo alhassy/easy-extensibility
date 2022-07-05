@@ -1,3 +1,19 @@
+<div align="center">
+
+<!-- logo=Gnu-Emacs  ~~~ a nice big `E` ;-) !-->
+<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.0.0-informational?logo=javascript"></a>
+
+<span>    
+<a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GNU_3-informational?logo=read-the-docs"></a>
+<a href="https://github.com/alhassy/easy-extensibility/blob/main/extension.js#L3"><img src="https://img.shields.io/badge/documentation-JsDocs-success?logo=read-the-docs"></a>
+<a href="https://github.com/alhassy/easy-extensibility/issues"><img src="https://img.shields.io/badge/contributions-welcome-green?logo=nil"></a>
+</span>
+    
+<a href="https://alhassy.github.io/"><img src="https://img.shields.io/badge/author-musa_al--hassy-purple?logo=nintendo-3ds"></a>
+<a href="https://www.buymeacoffee.com/alhassy"><img src="https://img.shields.io/badge/-buy_me_a%C2%A0coffee-gray?logo=buy-me-a-coffee"></a>
+
+<div>
+
 # easy-extensibility README
 
 Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!
