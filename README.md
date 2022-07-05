@@ -38,9 +38,9 @@ In constrast, the default approach to making a VSCode extension is as follows:
 4. 😱 Try your extension; stop the sandbox; alter your code; repeat.
 5. Now to actually make use of your extension, you should pacakge it with `vsce package`
    - To share it with others, you'll need to:
-      0. 😱 Make a Microsoft account
-      1. 😱 Make a new Azure organisation, as in https://dev.azure.com/alhassy      
-      2. 😱 Create a Personal Access Token for use in the extension marketplace; as per https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+      1. 😱 Make a Microsoft account
+      2. 😱 Make a new Azure organisation, as in https://dev.azure.com/alhassy      
+      3. 😱 Create a Personal Access Token for use in the extension marketplace; as per https://code.visualstudio.com/api/working-with-extensions/publishing-extension
 
 This approach doesn't encourage making extensions ---since there's so much ceremony--- and it, likewise, doesn't encourage sharing/packaging up the resulting (tiny) extensions.
 
@@ -56,9 +56,11 @@ This approach doesn't encourage making extensions ---since there's so much cerem
    `E.toggle.linenumbers()` and press `cmd+e` to execute it and see things change!
 <!-- 3. In the new VSCode instance, `Cmd+Shift+P` then `Hello World` to see things run.
  -->
-## TODO Requirements
+
+<!-- ## TODO Requirements
 
 If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+ -->
 
 <!-- ## TODO Extension Settings
 
@@ -96,3 +98,5 @@ Initial release; provides the `Hello World` command from the `cmd+shift+P` palle
 Also,
 - To learn about “saving reusable functions and having them load automatically”, please invoke `cmd+h find users init.js file, or provide a template`
 - Open the tutorial to learn more about using `cmd+E` by invoking `cmd+h tutorial`
+
+### 1.1.2 Minor typo fixes
