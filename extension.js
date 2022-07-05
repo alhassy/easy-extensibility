@@ -282,7 +282,7 @@ E.findFile = path => E.shell(`code ${path}`)
 commands["Find user's ~/init.js file, or provide a template"] = E =>
   E.shell('file ~/init.js').then(resp => {
     if (resp.stdout.includes('cannot open'))
-      E.shell('curl -o ~/init.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/extension.js')
+      E.shell('curl -o ~/init.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js')
     E.findFile('~/init.js')
   })
 
