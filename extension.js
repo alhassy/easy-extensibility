@@ -89,10 +89,124 @@ E.warning = (it, ...buttons) => vscode.window.showWarningMessage(E.string(it), .
  */
 E.error = (it, ...buttons) => vscode.window.showErrorMessage(E.string(it), ...buttons)
 
+// Navigation ================================================================================
+
+/** Move cursor forward to the next character, or `n`-many characters.
+ * - `n` is a number.
+ * - Move backward when `n` is negative. 
+ * 
+ * Movement is limited to the current line: If `n` is too large, we just move to the 0th column of the next line.
+ */
+ E.nextChar = (n = 1) => vscode.commands.executeCommand("cursorMove", {to: "right", value: n})
+
+ /** Move cursor forward to the next line, or `n`-many lines.
+  * - `n` is a number.
+  * - Move backward when `n` is negative. 
+  */
+ E.nextLine = (n = 1) => vscode.commands.executeCommand("cursorMove", {to: "down", by: "wrappedLine", value: n})
+ 
+ /** Move cursor to the end of the current line. */
+ E.endOfLine = () => vscode.commands.executeCommand('cursorLineEnd') 
+ 
+ /** Move cursor to the start of the current line. */
+ E.startOfLine = () => vscode.commands.executeCommand('cursorLineStart') 
+ 
+ /** Move cursor to the last line of the editor. */
+ E.endOfEditor = () => E.nextLine(E.lastLineNumber())
+ 
+ /** Move cursor to the first line of the editor. */
+ E.startOfEditor = () => E.nextLine(-E.lastLineNumber())
+ 
+ /** Move cursor to the given `line` number and `column` number. */
+ E.gotoLine = (line, column) => {E.startOfEditor(); E.nextLine(line - 1); E.startOfLine(); if(column) E.nextChar(column)}
+ 
+ /** Save cursor location, execute `callback`, then return to the orginal cursor location.
+  * 
+  * This is useful for methods that move the cursor to do some work, like grabbing text from some random line,
+  * but we don't want to confuse the user with unexpected cursor movements, so we restore them when the underlying task is done.
+  * 
+  * ### Example
+  * ```
+  * // Echo the contents of the first line, but leave cursor at its current position.
+  * E.saveExcursion(_ => {E.startOfEditor(); E.copy().then(E.message) })
+  * ```
+  * 
+  * TODO: We might move the cursor to a different editor, so ideally we save the current editor as well and restore it.
+  */
+  E.saveExcursion = callback => {
+   let editor = vscode.window.activeTextEditor
+   let position = editor.selection.active
+   callback()
+   editor.selection = new vscode.Selection(position, position)
+ }
+
+// Inserts & input ================================================================================
+
 /**  Insert text at current cursor position;  `it` is ensured to be a `E.string`. */
 E.insert = it => {
   const editor = vscode.window.activeTextEditor
   if (editor) editor.edit(editBuilder => editBuilder.insert(editor.selection.active, E.string(it)))
+}
+
+/** Insert a new line and move cursor to start of it. */
+E.newLine = () => {vscode.commands.executeCommand('lineBreakInsert'); E.nextLine();}
+
+/** Insert string `str` at the given `line` number and `col`umn number. 
+ * - If the line ends before the specified `col`, then insert the text at the final column (ie end of line).
+ */
+ E.insertAt = (line, col, str) => vscode.window.activeTextEditor.edit(editBuilder => editBuilder.insert(new vscode.Position(line - 1, col), str))
+
+/** Save all editors. */
+E.saveAll = () => E.executeCommand("workbench.action.files.saveAll") 
+
+/** Perform a super simple textual find-replace on the current editor.
+ * #### Example use
+ * ```
+ * E.findReplace("Hi buddo!", "Hola") // This will alter this exact file, and replace the first phrase with the second!
+ * ```
+ */
+E.findReplace = (oldy, newy, file = E.currentFileName()) => Promise.resolve(E.saveAll()).then(_ => E.shell(`sed -i '' 's/${oldy}/${newy}/g' ${file}`))
+
+/** Read a string, possibly with completion.
+ *
+ * - `prompt?: string` An optional string to show as placeholder in the input box to guide the user what to type.
+ * - `choices?: undefined | string[] | object` The collection of completion candidates, if any.
+ *
+ * The result depends on whether `choices` is provided or not, and it's type:
+ * 1. If `choices` is not provided, then the result is the string the user entered.
+ * 2. If `choices` is an array of strings, then the result is one of those array elements. (As entered by the user.)
+ * 3. If `choices` is an object, then the completions are the keys (from which the user can enter) and the result is the associated value.
+ *
+ * #### Examples
+ * ```
+ * // Get an input and try to convert it to a number, then show its double in a message
+ * E.readInput().then(Number).then(x => E.message(2 * x))
+ *
+ * // Alternatively, using E's await:
+ * {
+ *   let it = await E.readInput("Favorite number?")
+ *   let double = Number(it) * 2
+ *   E.message(double)
+ * }
+ *
+ * // Let user select from options `parent` and `son`, but whose values are `Musa` and `Yusuf`, respectively.
+ * E.completingRead('Who?', { parent: 'Musa', son: 'Yusuf' }).then(E.message)
+ * ```
+ * #### Example Application: Open favourite video in browser
+ * ```
+ * // Completing read, for videos I like to have in the background
+ * E.readInput('What do you want to listen to?',
+ *  {
+ *   'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',
+ *   'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',
+ *   'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts'
+ * }).then(E.browseURL)
+ * ```
+ * */
+E.readInput = (prompt, choices) => {
+  if (!choices) return vscode.window.showInputBox({ placeHolder: prompt })
+  if (Array.isArray(choices)) return vscode.window.showQuickPick(choices, { placeHolder: prompt })
+  return vscode.window.showQuickPick(Object.keys(choices), { placeHolder: prompt }).then(key => choices[key])
 }
 
 // Selections ================================================================================
@@ -102,13 +216,35 @@ E.currentLineNumber = () => vscode.window.activeTextEditor.selection.active.line
 // Implementation note: Internally, vscode uses zero-indexing and so the number the user sees is one-off from the internal
 // number, so we adjust that with a +1. Note: null + 1  ==  1
 
+/** Get the number of the final line of the current active edtior. */
+E.lastLineNumber = () => vscode.window.activeTextEditor.document.lineCount
+
 /** Get the contents of line `n` as a string. */
 E.lineAt = n => vscode.window.activeTextEditor.document.lineAt(Math.max(0, n - 1)).text
 // Implementation note: Internally, vscode uses zero-indexing and so the number the user sees is one-off from the internal
 // number, so we adjust that with a -1.
 
+/** Get the string contents of the first line. */
+E.firstLine = () => E.lineAt(0)
+
+/** Get the string contents of the last line. */
+E.lastLine = () => E.lineAt(E.lastLineNumber())
+
 /** Get the current line's contents as a string. */
 E.currentLine = () => E.lineAt(E.currentLineNumber())
+
+/** Get the entire contents of the current editor, as a string. */
+E.editorContents = () => vscode.window.activeTextEditor.document.getText()
+
+/** Erase all contents of an editor, and replace its contents with the given string `replacement`, if any. */
+E.clearEditor = (replacement = '') =>
+  vscode.window.activeTextEditor.edit(editBuilder =>
+    editBuilder.replace(
+      new vscode.Range(new vscode.Position(0, 0), new vscode.Position(E.lastLineNumber(), 0)),
+      replacement
+    )
+  )
+
 
 /** Get selected region, as string. */
 E.selection = () => {
@@ -135,7 +271,104 @@ E.selectionOrEntireLine = () => {
   return text
 }
 
-// currentFileName, shell ================================================================================
+/** Select text from current cursor position until the end of the current line. 
+ * - This method starts a selection of a region, it does not return any text by itself.
+ * - See also `E.copyLine`.
+ */
+E.endOfLineSelect = () => vscode.commands.executeCommand('cursorLineEndSelect')
+
+/** Select text from current cursor position until the start of the current line. 
+ * - This method starts a selection of a region, it does not return any text by itself.
+ * - See also `E.copyLine`.
+ */
+E.startOfLineSelect = () => vscode.commands.executeCommand('cursorLineStartSelect')
+
+// Clipboard ================================================================================
+
+/** Get the clipboard contents, as a promised string.
+ * #### Examples
+ * ```
+ * // What's in the clipboard?
+ * E.clipboardRead().then(E.message)
+ * 
+ * // Insert the contents of the clipboard; [First approach]
+ * E.paste()
+ *  
+ * // Insert the contents of the clipboard; [Second approach]
+ * E.clipboardRead().then(E.insert)
+ * ```
+ * ### See Also
+ * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+ */
+ E.clipboardRead = vscode.env.clipboard.readText
+
+ /** Write the given string to the clipboard.
+  * #### Examples
+  * ```
+  * // Save something to the clipboard.
+  * E.clipboardWrite("Hiya")
+  * 
+  * // Check that the clipboard currently holds what we believe it does.
+  * E.clipboardRead().then(x => E.message(x === "Hiya"))
+  * 
+  * // Insert the contents of the clipboard; [First approach]
+  * E.paste()
+  *  
+  * // Insert the contents of the clipboard; [Second approach]
+  * E.clipboardRead().then(E.insert)
+  * ```
+  * ### See Also
+  * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+  */
+ E.clipboardWrite = vscode.env.clipboard.writeText
+ 
+ /** Copy current line, or any active selection. Returns a promise.
+  * #### Examples
+  * ``` 
+  * // Copy current line, then make use of the string that has been copied.
+  * E.copy().then(x => E.message(x))
+  * 
+  * // Or using E's await:
+  * {
+  * 	let x = await E.copy()
+  * 	let y = x.toUpperCase()
+  * 	E.message(y)
+  * }
+  * 
+  * // Copy the current line, then immediately paste it back, twice
+  * E.copy(); E.paste(); E.paste()
+  * ```
+  * ### See Also
+  * `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+  */
+ E.copy  = () =>  Promise.resolve(vscode.commands.executeCommand('execCopy')).then(E.clipboardRead)
+ 
+ /** Cut current line, or any active selection. Returns a promise.
+  * #### Examples
+  * ``` 
+  * // Cut current line, then make use of the string that has been cut.
+  * E.cut().then(x => E.message(x))
+  * ```
+  * ### See Also
+  * `E.copy`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+  */
+ E.cut   = () =>  Promise.resolve(vscode.commands.executeCommand('execCut')).then(E.clipboardRead) 
+ 
+ /** Paste current clipboard contents, overwriting any active selection. Returns a promise.
+  * #### Examples
+  * ``` 
+  * // Paste clipboard contents, then make use of the string that has been pasted.
+  * E.paste().then(E.message)
+  * ```
+  * ### See Also
+  * `E.copy`, `E.cut`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+  */
+ E.paste = () =>  Promise.resolve(vscode.commands.executeCommand('execPaste')).then(E.clipboardRead) 
+ 
+ /** Copy the contents of the current line, or a given numeric `line` number. */
+ E.copyLine = (line = E.currentLineNumber()) => E.saveExcursion(_ => { E.gotoLine(line); E.endOfLineSelect(); E.copy(); E.paste() }) 
+
+// currentFileName, shell, browseURL ================================================================================
 
 /** Get the name of the current file, editor, as a string.
  *
@@ -152,6 +385,9 @@ E.currentFileName = () => vscode.window.activeTextEditor.document.fileName
  * ```
  * // Who is the current user?
  * E.shell('whoami').then(x => E.message(x.stdout))
+ * 
+ * // Make me smile! (Using E's await).
+ * E.message((await E.shell('fortune')).stdout)
  *
  * // Run an arbitrary command-line function on the current file; namely prettier.
  * E.shell(`prettier --write ${E.currentFileName()}`)
@@ -170,6 +406,25 @@ E.terminal = (cmd, title = cmd) => {
   t.show(true) // Ensure terminal is showing, but don't force focus to jump here!
   return t
 }
+
+/** Make a new webpanel with the given `title` string, that renders the given `html` string.
+ * 
+ * #### Example Use
+ * ```
+ * E.shell("fortune").then(x => E.newWebPanel('Fortune!', `<marquee>${x.stdout}</marquee>`))
+ * ```
+ * 
+ * See docs: https://code.visualstudio.com/api/extension-guides/webview
+*/
+E.newWebPanel = (title, html) => { vscode.window.createWebviewPanel(null, title).webview.html = html }
+
+/** Browse to a given `url` string, using the OS default browser.
+ * #### Example Usage
+ * ```
+ * E.browseURL("www.icanhazdadjoke.com")
+ * ```
+ */
+E.browseURL = url => E.shell(`open ${url.startsWith('http') ? '' : 'http://'}${url}`)
 
 // Toggles ================================================================================
 

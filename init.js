@@ -96,25 +96,14 @@ commands['screencapture: Interactively capture screen and save to clipboard; the
 // to quickly. I'd like to have that menu of items be right here in my editor.
 // So, let's make some commands to do just that!
 
-{
-  /** Browse to a given `url` string, using the OS default browser.
-   * #### Example Usage
-   * ```
-   * browseURL("www.icanhazdadjoke.com")
-   * ```
-   */
-  const browseURL = url => E.shell(`open ${url.startsWith('http') ? '' : 'http://'}${url}`)
-
-  commands["Youtube ~ Background audio while I'm working"] = async E => {
-    let options = { placeHolder: 'What do you want to listen to?' }
-    let videos = {
-      'Daily Supplications': 'https://youtu.be/9m9yE7qtq5w',
-      'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',
-      'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',
-      'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts',
-      'ASMR ~ Vancouver Cafe': 'https://youtu.be/7sg-dfYLGRQ'
-    }
-    const choice = await vscode.window.showQuickPick(Object.keys(videos), options)
-    browseURL(videos[choice])
+commands["Youtube ~ Background audio while I'm working"] = async E => {
+  let videos = {
+    'Daily Supplications': 'https://youtu.be/9m9yE7qtq5w',
+    'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',
+    'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',
+    'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts',
+    'ASMR ~ Vancouver Cafe': 'https://youtu.be/7sg-dfYLGRQ'
   }
+  const url = await E.readInput('What do you want to listen to?', videos)
+  E.browseURL(url)
 }
