@@ -1,3 +1,16 @@
+/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on-the-fly.
+ * 
+ * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with `cmd+h`.
+ * 
+ * - There is no edit-load-debug cycle; just edit-then-use! 
+ * - Then when you're happy with what you have, you form a full extension ---involved default approach 😱!
+ * - Or, better yet, save your extensions in an `init.js` file ---new lightweight approach 🤗!
+ * 
+ * # Accessibility
+ * - Invoke `cmd+h tutorial` to read the tutorial on using this extension.
+ * - To learn about “saving reusable functions and having them load automatically”, invoke `cmd+h find users init.js file, or provide a template`.
+ */
+
 // vscode, E, commands ================================================================================
 
 const vscode = require('vscode')
@@ -45,6 +58,48 @@ const commands = {}
  */
 const E = {}
 
+// Prefix Arguments ================================================================================
+
+/** Commands invoked with `cmd+h` may provide variations on their behaviour by casing on this value.
+ *
+ * ### Example Usage
+ * ```
+ * commands["speak"] = E => E.currentPrefixArgument ? E.error("HELLO") : E.message("Hi")
+ * ```
+ * Now we have **two commands for the price of one**:
+ * 1. `cmd+h speak` will show *Hi* in a message notification.
+ * 2. `shift+cmd+h speak` will show *HELLO* in a red error notification.
+ *
+ * ### This is more than just a toggle
+ * Users may wish to pass arbitrary numeric values to commands, and so commands can have arbitary variations.
+ * For instance, a user might add the following keybinding declaration to their VSCode settings, so that
+ * `shift+5 cmd+h` will invoke a command and temporarily set `E.currentPrefixArgument` to 5.
+ * ```
+ * {
+ *       "command": "easy-extensibility.executeRegisteredCommand",
+ *       "mac": "shift+5 cmd+h",
+ *       "when": "editorTextFocus",
+ *       "args": 5
+ * }
+ * ```
+ * You can then *see* this in-action by invoking the following command with `cmd+h hi`, `shift+cmd+h hi`, and `shift+5 cmd+h hi`.
+ * ```
+ * commands["hi"] = E => E.message("Hi ~ " + E.currentPrefixArgument)
+ * ```
+ *
+ * ### Brevity & Symmetry
+ *
+ * For brevity, this extension only defines the binding `shift+cmd+h` which sets `E.currentPrefixArgument = 1`
+ * then invokes the usual `cmd+h`. For other values for `E.currentPrefixArgument`, users may alter their personal
+ * keybindings, as shown above.
+ *
+ * For the sake of symmetry, this extension declares the binding `shift+cmd+e`.
+ * - It does not involve `E.currentPrefixArgument` at all.
+ * - `cmd+e` shows the result of evaluating a selection, or the current line;
+ * - `shift+cmd+e` inserts the result on a newline.
+ */
+E.currentPrefixArgument = undefined
+
 // Internal Configurations ================================================================================
 
 /** Configurations of the `E` API; e.g., how evaluated text is shown is handled with `E.internal.echoFunction`. */
@@ -89,56 +144,98 @@ E.warning = (it, ...buttons) => vscode.window.showWarningMessage(E.string(it), .
  */
 E.error = (it, ...buttons) => vscode.window.showErrorMessage(E.string(it), ...buttons)
 
+// Overlays ================================================================================
+E.overlayType = vscode.window.createTextEditorDecorationType({
+  after: {
+    margin: '0 0 0 0.5rem'
+  },
+  dark: { after: { border: '0.5px solid #808080' } },
+  light: { after: { border: '0.5px solid #c5c5c5' } }
+})
+
+// Hide overlays on keyboard movement; otherwise the overlay moves too
+vscode.window.onDidChangeTextEditorSelection(event => {
+  let { Command, Keyboard } = vscode.TextEditorSelectionChangeKind
+  if ([Command, Keyboard].includes(event.kind)) E.withEditor(ed => ed.setDecorations(E.overlayType, []))
+})
+
+/** Given a string `str`, produce an overlay showing it at the end of the line; return its overlay decoration config.
+ *
+ * ### Overlays are one-per-line: Only the final `E.overlay` call yields an observable effect.
+ * ```
+ * E.overlay("Hello"); E.overlay("World!")
+ * ```
+ * Is essentially the same as just:
+ * ```
+ * E.overlay("World!")
+ * ```
+ */
+E.overlay = str => {
+  const editor = vscode.window.activeTextEditor
+  if (!editor) return
+  const decoration = {
+    range: editor.selection,
+    renderOptions: { after: { contentText: str } }
+  }
+  editor.setDecorations(E.overlayType, [decoration])
+  return decoration // : DecorationOptions
+}
+
 // Navigation ================================================================================
 
 /** Move cursor forward to the next character, or `n`-many characters.
  * - `n` is a number.
- * - Move backward when `n` is negative. 
- * 
+ * - Move backward when `n` is negative.
+ *
  * Movement is limited to the current line: If `n` is too large, we just move to the 0th column of the next line.
  */
- E.nextChar = (n = 1) => vscode.commands.executeCommand("cursorMove", {to: "right", value: n})
+E.nextChar = (n = 1) => vscode.commands.executeCommand('cursorMove', { to: 'right', value: n })
 
- /** Move cursor forward to the next line, or `n`-many lines.
-  * - `n` is a number.
-  * - Move backward when `n` is negative. 
-  */
- E.nextLine = (n = 1) => vscode.commands.executeCommand("cursorMove", {to: "down", by: "wrappedLine", value: n})
- 
- /** Move cursor to the end of the current line. */
- E.endOfLine = () => vscode.commands.executeCommand('cursorLineEnd') 
- 
- /** Move cursor to the start of the current line. */
- E.startOfLine = () => vscode.commands.executeCommand('cursorLineStart') 
- 
- /** Move cursor to the last line of the editor. */
- E.endOfEditor = () => E.nextLine(E.lastLineNumber())
- 
- /** Move cursor to the first line of the editor. */
- E.startOfEditor = () => E.nextLine(-E.lastLineNumber())
- 
- /** Move cursor to the given `line` number and `column` number. */
- E.gotoLine = (line, column) => {E.startOfEditor(); E.nextLine(line - 1); E.startOfLine(); if(column) E.nextChar(column)}
- 
- /** Save cursor location, execute `callback`, then return to the orginal cursor location.
-  * 
-  * This is useful for methods that move the cursor to do some work, like grabbing text from some random line,
-  * but we don't want to confuse the user with unexpected cursor movements, so we restore them when the underlying task is done.
-  * 
-  * ### Example
-  * ```
-  * // Echo the contents of the first line, but leave cursor at its current position.
-  * E.saveExcursion(_ => {E.startOfEditor(); E.copy().then(E.message) })
-  * ```
-  * 
-  * TODO: We might move the cursor to a different editor, so ideally we save the current editor as well and restore it.
-  */
-  E.saveExcursion = callback => {
-   let editor = vscode.window.activeTextEditor
-   let position = editor.selection.active
-   callback()
-   editor.selection = new vscode.Selection(position, position)
- }
+/** Move cursor forward to the next line, or `n`-many lines.
+ * - `n` is a number.
+ * - Move backward when `n` is negative.
+ */
+E.nextLine = (n = 1) => vscode.commands.executeCommand('cursorMove', { to: 'down', by: 'wrappedLine', value: n })
+
+/** Move cursor to the end of the current line. */
+E.endOfLine = () => vscode.commands.executeCommand('cursorLineEnd')
+
+/** Move cursor to the start of the current line. */
+E.startOfLine = () => vscode.commands.executeCommand('cursorLineStart')
+
+/** Move cursor to the last line of the editor. */
+E.endOfEditor = () => E.nextLine(E.lastLineNumber())
+
+/** Move cursor to the first line of the editor. */
+E.startOfEditor = () => E.nextLine(-E.lastLineNumber())
+
+/** Move cursor to the given `line` number and `column` number. */
+E.gotoLine = (line, column) => {
+  E.startOfEditor()
+  E.nextLine(line - 1)
+  E.startOfLine()
+  if (column) E.nextChar(column)
+}
+
+/** Save cursor location, execute `callback`, then return to the orginal cursor location.
+ *
+ * This is useful for methods that move the cursor to do some work, like grabbing text from some random line,
+ * but we don't want to confuse the user with unexpected cursor movements, so we restore them when the underlying task is done.
+ *
+ * ### Example
+ * ```
+ * // Echo the contents of the first line, but leave cursor at its current position.
+ * E.saveExcursion(_ => {E.startOfEditor(); E.copy().then(E.message) })
+ * ```
+ *
+ * TODO: We might move the cursor to a different editor, so ideally we save the current editor as well and restore it.
+ */
+E.saveExcursion = callback => {
+  let editor = vscode.window.activeTextEditor
+  let position = editor.selection.active
+  callback()
+  editor.selection = new vscode.Selection(position, position)
+}
 
 // Inserts & input ================================================================================
 
@@ -149,15 +246,19 @@ E.insert = it => {
 }
 
 /** Insert a new line and move cursor to start of it. */
-E.newLine = () => {vscode.commands.executeCommand('lineBreakInsert'); E.nextLine();}
+E.newLine = () => {
+  vscode.commands.executeCommand('lineBreakInsert')
+  E.nextLine()
+}
 
-/** Insert string `str` at the given `line` number and `col`umn number. 
+/** Insert string `str` at the given `line` number and `col`umn number.
  * - If the line ends before the specified `col`, then insert the text at the final column (ie end of line).
  */
- E.insertAt = (line, col, str) => vscode.window.activeTextEditor.edit(editBuilder => editBuilder.insert(new vscode.Position(line - 1, col), str))
+E.insertAt = (line, col, str) =>
+  vscode.window.activeTextEditor.edit(editBuilder => editBuilder.insert(new vscode.Position(line - 1, col), str))
 
 /** Save all editors. */
-E.saveAll = () => E.executeCommand("workbench.action.files.saveAll") 
+E.saveAll = () => E.executeCommand('workbench.action.files.saveAll')
 
 /** Perform a super simple textual find-replace on the current editor.
  * #### Example use
@@ -165,7 +266,8 @@ E.saveAll = () => E.executeCommand("workbench.action.files.saveAll")
  * E.findReplace("Hi buddo!", "Hola") // This will alter this exact file, and replace the first phrase with the second!
  * ```
  */
-E.findReplace = (oldy, newy, file = E.currentFileName()) => Promise.resolve(E.saveAll()).then(_ => E.shell(`sed -i '' 's/${oldy}/${newy}/g' ${file}`))
+E.findReplace = (oldy, newy, file = E.currentFileName()) =>
+  Promise.resolve(E.saveAll()).then(_ => E.shell(`sed -i '' 's/${oldy}/${newy}/g' ${file}`))
 
 /** Read a string, possibly with completion.
  *
@@ -245,7 +347,6 @@ E.clearEditor = (replacement = '') =>
     )
   )
 
-
 /** Get selected region, as string. */
 E.selection = () => {
   let editor = vscode.window.activeTextEditor
@@ -271,13 +372,13 @@ E.selectionOrEntireLine = () => {
   return text
 }
 
-/** Select text from current cursor position until the end of the current line. 
+/** Select text from current cursor position until the end of the current line.
  * - This method starts a selection of a region, it does not return any text by itself.
  * - See also `E.copyLine`.
  */
 E.endOfLineSelect = () => vscode.commands.executeCommand('cursorLineEndSelect')
 
-/** Select text from current cursor position until the start of the current line. 
+/** Select text from current cursor position until the start of the current line.
  * - This method starts a selection of a region, it does not return any text by itself.
  * - See also `E.copyLine`.
  */
@@ -290,83 +391,89 @@ E.startOfLineSelect = () => vscode.commands.executeCommand('cursorLineStartSelec
  * ```
  * // What's in the clipboard?
  * E.clipboardRead().then(E.message)
- * 
+ *
  * // Insert the contents of the clipboard; [First approach]
  * E.paste()
- *  
+ *
  * // Insert the contents of the clipboard; [Second approach]
  * E.clipboardRead().then(E.insert)
  * ```
  * ### See Also
  * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
  */
- E.clipboardRead = vscode.env.clipboard.readText
+E.clipboardRead = vscode.env.clipboard.readText
 
- /** Write the given string to the clipboard.
-  * #### Examples
-  * ```
-  * // Save something to the clipboard.
-  * E.clipboardWrite("Hiya")
-  * 
-  * // Check that the clipboard currently holds what we believe it does.
-  * E.clipboardRead().then(x => E.message(x === "Hiya"))
-  * 
-  * // Insert the contents of the clipboard; [First approach]
-  * E.paste()
-  *  
-  * // Insert the contents of the clipboard; [Second approach]
-  * E.clipboardRead().then(E.insert)
-  * ```
-  * ### See Also
-  * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
-  */
- E.clipboardWrite = vscode.env.clipboard.writeText
- 
- /** Copy current line, or any active selection. Returns a promise.
-  * #### Examples
-  * ``` 
-  * // Copy current line, then make use of the string that has been copied.
-  * E.copy().then(x => E.message(x))
-  * 
-  * // Or using E's await:
-  * {
-  * 	let x = await E.copy()
-  * 	let y = x.toUpperCase()
-  * 	E.message(y)
-  * }
-  * 
-  * // Copy the current line, then immediately paste it back, twice
-  * E.copy(); E.paste(); E.paste()
-  * ```
-  * ### See Also
-  * `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
-  */
- E.copy  = () =>  Promise.resolve(vscode.commands.executeCommand('execCopy')).then(E.clipboardRead)
- 
- /** Cut current line, or any active selection. Returns a promise.
-  * #### Examples
-  * ``` 
-  * // Cut current line, then make use of the string that has been cut.
-  * E.cut().then(x => E.message(x))
-  * ```
-  * ### See Also
-  * `E.copy`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
-  */
- E.cut   = () =>  Promise.resolve(vscode.commands.executeCommand('execCut')).then(E.clipboardRead) 
- 
- /** Paste current clipboard contents, overwriting any active selection. Returns a promise.
-  * #### Examples
-  * ``` 
-  * // Paste clipboard contents, then make use of the string that has been pasted.
-  * E.paste().then(E.message)
-  * ```
-  * ### See Also
-  * `E.copy`, `E.cut`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
-  */
- E.paste = () =>  Promise.resolve(vscode.commands.executeCommand('execPaste')).then(E.clipboardRead) 
- 
- /** Copy the contents of the current line, or a given numeric `line` number. */
- E.copyLine = (line = E.currentLineNumber()) => E.saveExcursion(_ => { E.gotoLine(line); E.endOfLineSelect(); E.copy(); E.paste() }) 
+/** Write the given string to the clipboard.
+ * #### Examples
+ * ```
+ * // Save something to the clipboard.
+ * E.clipboardWrite("Hiya")
+ *
+ * // Check that the clipboard currently holds what we believe it does.
+ * E.clipboardRead().then(x => E.message(x === "Hiya"))
+ *
+ * // Insert the contents of the clipboard; [First approach]
+ * E.paste()
+ *
+ * // Insert the contents of the clipboard; [Second approach]
+ * E.clipboardRead().then(E.insert)
+ * ```
+ * ### See Also
+ * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+ */
+E.clipboardWrite = vscode.env.clipboard.writeText
+
+/** Copy current line, or any active selection. Returns a promise.
+ * #### Examples
+ * ```
+ * // Copy current line, then make use of the string that has been copied.
+ * E.copy().then(x => E.message(x))
+ *
+ * // Or using E's await:
+ * {
+ * 	let x = await E.copy()
+ * 	let y = x.toUpperCase()
+ * 	E.message(y)
+ * }
+ *
+ * // Copy the current line, then immediately paste it back, twice
+ * E.copy(); E.paste(); E.paste()
+ * ```
+ * ### See Also
+ * `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+ */
+E.copy = () => Promise.resolve(vscode.commands.executeCommand('execCopy')).then(E.clipboardRead)
+
+/** Cut current line, or any active selection. Returns a promise.
+ * #### Examples
+ * ```
+ * // Cut current line, then make use of the string that has been cut.
+ * E.cut().then(x => E.message(x))
+ * ```
+ * ### See Also
+ * `E.copy`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+ */
+E.cut = () => Promise.resolve(vscode.commands.executeCommand('execCut')).then(E.clipboardRead)
+
+/** Paste current clipboard contents, overwriting any active selection. Returns a promise.
+ * #### Examples
+ * ```
+ * // Paste clipboard contents, then make use of the string that has been pasted.
+ * E.paste().then(E.message)
+ * ```
+ * ### See Also
+ * `E.copy`, `E.cut`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.
+ */
+E.paste = () => Promise.resolve(vscode.commands.executeCommand('execPaste')).then(E.clipboardRead)
+
+/** Copy the contents of the current line, or a given numeric `line` number. */
+E.copyLine = (line = E.currentLineNumber()) =>
+  E.saveExcursion(_ => {
+    E.gotoLine(line)
+    E.endOfLineSelect()
+    E.copy()
+    E.paste()
+  })
 
 // currentFileName, shell, browseURL ================================================================================
 
@@ -379,13 +486,22 @@ E.startOfLineSelect = () => vscode.commands.executeCommand('cursorLineStartSelec
  */
 E.currentFileName = () => vscode.window.activeTextEditor.document.fileName
 
+/** Get the name of the directory that contains the current file, editor, as a string.
+ *
+ * For example, within my `~/init.js` pressing `cmd+e` on the following:
+ * ```
+ * E.currentDirectory() //  ⇒  /Users/musa/
+ * ```
+ */
+E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
+
 /** Run a shell command and get the result as promised object of `{stdout: string, stderr: string}`.
  *
  * #### Examples
  * ```
  * // Who is the current user?
  * E.shell('whoami').then(x => E.message(x.stdout))
- * 
+ *
  * // Make me smile! (Using E's await).
  * E.message((await E.shell('fortune')).stdout)
  *
@@ -399,6 +515,24 @@ E.shell = require('util').promisify(require('child_process').exec)
  *  Title the resulting terminal with the given `title` string.
  *
  *  Result value is of type `vscode.Terminal`.
+ *
+ * ### Example Usage: Extension Idea: Run arbitrary CLI commands on the current file & see the result
+ * ```
+ * commands["Run gulp tests"] = E => E.terminal(`npx gulp test-partial --file=${E.currentFileName()}`, "Gulp!")
+ * ```
+ * - Now `cmd+h gulp` will actually run your Gulp tests *only* on the current file.
+ * - Note: There is an awesome *Tasks Explorer* VSCode extension which will show available commands to run, such as gulp;
+ *   but it does not provide the fine-grained capability of this particular example ---namely, to be run on the current file only.
+ *
+ * #### Even better would be to change the behaviour of this command, on the fly
+ * With the code below, `cmd+h gulp` will run Gulp on the current file,
+ * whereas `shift+cmd+h` will run the Gulp precommit task for the entire repo.
+ * ```
+ * commands["Run gulp tests"] = E => {
+ *   const cmd = E.currentPrefixArgument ? 'gulp precommit' : `npx gulp test-partial --file=${E.currentFileName()}`
+ *   E.terminal(cmd, 'Gulp!')
+ *  }
+ * ```
  */
 E.terminal = (cmd, title = cmd) => {
   let t = vscode.window.createTerminal(title)
@@ -408,15 +542,17 @@ E.terminal = (cmd, title = cmd) => {
 }
 
 /** Make a new webpanel with the given `title` string, that renders the given `html` string.
- * 
+ *
  * #### Example Use
  * ```
  * E.shell("fortune").then(x => E.newWebPanel('Fortune!', `<marquee>${x.stdout}</marquee>`))
  * ```
- * 
+ *
  * See docs: https://code.visualstudio.com/api/extension-guides/webview
-*/
-E.newWebPanel = (title, html) => { vscode.window.createWebviewPanel(null, title).webview.html = html }
+ */
+E.newWebPanel = (title, html) => {
+  vscode.window.createWebviewPanel(null, title).webview.html = html
+}
 
 /** Browse to a given `url` string, using the OS default browser.
  * #### Example Usage
@@ -598,7 +734,7 @@ commands['Reload ~/init.js file'](E)
 
 function activate(context) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('easy-extensibility.evaluateSelection', () => {
+    vscode.commands.registerCommand('easy-extensibility.evaluateSelection', async currentPrefixArgument => {
       // To evaluate the current selection, we need an active editor.
       // For the exact depenency, see the implementation of `E.selection`.
       let editor = vscode.window.activeTextEditor
@@ -621,6 +757,11 @@ function activate(context) {
       } else if (text.includes('await ')) result = eval(`(async () => { ${text} })()`)
       else result = eval(text)
 
+      if (currentPrefixArgument) {
+        E.insert(`\n${result}`)
+        return
+      }
+
       // Don't bother echoing void output.
       if (text.includes('E.message') || text.includes('E.insert')) return
 
@@ -629,12 +770,17 @@ function activate(context) {
   )
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('easy-extensibility.executeRegisteredCommand', async () => {
+    vscode.commands.registerCommand('easy-extensibility.executeRegisteredCommand', async currentPrefixArgument => {
+      E.currentPrefixArgument = currentPrefixArgument
       let options = { placeHolder: 'Pick a command ' }
-      const result = await vscode.window.showQuickPick(Object.keys(commands), options)
-      if (result) {
-        E.message(`Executing ${result}...`)
-        commands[result](E, vscode)
+      try {
+        const result = await vscode.window.showQuickPick(Object.keys(commands), options)
+        if (result) {
+          E.message(`Executing ${result}...`)
+          commands[result](E, vscode)
+        }
+      } finally {
+        E.currentPrefixArgument = undefined
       }
     })
   )

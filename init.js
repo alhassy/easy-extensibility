@@ -8,6 +8,8 @@
 // This is useful for adding your own snippets, useful commands, to the `cmd+h` command pallet
 // or for configuring VSCode depending on the workspace, date, machine, etc.
 
+// If you haven't already, invoke `cmd+h tutorial` to read the tutorial first!
+
 // The current implementation treats the user's init file as if it were dynamically-scoped:
 // The `~/init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
 // (This is similar to the use of the keyword `this` in object-oriented programming:
@@ -107,3 +109,23 @@ commands["Youtube ~ Background audio while I'm working"] = async E => {
   const url = await E.readInput('What do you want to listen to?', videos)
   E.browseURL(url)
 }
+
+// ==================================================================================
+// =============== Running arbitrary CLI programs on the current file ===============
+// ==================================================================================
+
+/** `cmd+h gulp` runs Gulp on the current file, whereas `shift+cmd+h gulp` runs the
+ * gulp precommit task on the entire repo.
+ * I intentionally `cd` to the parent directory for those rare times when I have
+ * a file open outside of its workspace.
+ */
+commands['File: Gulp tests!'] = E => {
+  const cmd = E.currentPrefixArgument ? 'gulp precommit' : `npx gulp test-partial --file=${E.currentFileName()}`
+  E.terminal(`cd ${E.currentDirectory()}; ${cmd}`, 'Gulp!')
+}
+
+//! Not needed, just invoke `alt+shift+f` to `f`ormat the current active editor.
+// commands["File: Prettify!"] = E => E.shell(`prettier --write ${E.currentFileName()}`)
+
+//! Not needed, just use the Flow VSCode Extension
+// commands['File: Flow check!'] = E => E.terminal(`flow check ${E.currentFileName()}`)

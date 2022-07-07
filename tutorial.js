@@ -4,6 +4,9 @@
 // ====================== Quickly! What does this extension do!? =====================
 // ===================================================================================
 
+// Overall Goal: VSCode is a living JavaScript interpreter, 
+// so we should be able to execute arbitrary JS to alter VSCode on-the-fly.
+
 // Type the following in *ANY EDITOR* window, then press cmd+e to see things changing live!
 
 E.toggle.screencast() // Show's every key I press, for onlookers! So neato!
@@ -14,12 +17,12 @@ editor.options.cursorStyle = 2 // 1 thick line; 2 filled block; 3 underline; 4 t
 vscode.commands.executeCommand('breadcrumbs.toggle')
 
 // Using the new “E API”: Let's make VSCode super minimal.
-E.toggle.panel()
-E.toggle.sideBar()
-E.toggle.activityBar()
-E.toggle.breadcrumbs()
-E.toggle.tabs()
-E.toggle.lineNumbers()
+E.toggle.panel(); E.toggle.sideBar(); E.toggle.activityBar(); 
+E.toggle.breadcrumbs(); E.toggle.tabs(); E.toggle.lineNumbers();
+E.toggle.statusBar(); E.toggle.minimap()
+
+// cmd+e to register a function, then cmd+h to invoke it!
+async function smile (E) { let {stdout} = await E.shell('fortune'); E.insert(stdout) }
 
 // No more messing with configs, or making full-on extensions, just to try things out!
 
@@ -91,7 +94,6 @@ E.terminal('fortune | cowsay | lolcat')
 // ===================================================================================
 // ================================ Reusable Functions ===============================
 // ===================================================================================
-
 
 // We can wrap these tiny utilities into reusable functions, and register them immediately too!
 // Select the following function, then cmd+E, then "cmd+h now RETURN" to invoke it.

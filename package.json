@@ -2,8 +2,9 @@
   "name": "easy-extensibility",
   "displayName": "easy-extensibility",
   "description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "repository": "https://github.com/alhassy/easy-extensibility",
+  "icon": "graphics/logo.png",  
   "publisher": "alhassy",
   "engines": {
     "vscode": "^1.68.0"
@@ -31,15 +32,31 @@
     "keybindings": [
       {
         "command": "easy-extensibility.evaluateSelection",
-        "key": "ctrl+e",
         "mac": "cmd+e",
         "when": "editorTextFocus"
       },
       {
+        "command": "easy-extensibility.evaluateSelection",
+        "mac": "shift+cmd+e",
+        "when": "editorTextFocus",
+        "args": 1
+      },
+      {
         "command": "easy-extensibility.executeRegisteredCommand",
-        "key": "ctrl+h",
         "mac": "cmd+h",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "easy-extensibility.executeRegisteredCommand",
+        "mac": "shift+cmd+h",
+        "when": "editorTextFocus",
+        "args": 1
+      },
+      {
+        "command": "easy-extensibility.executeRegisteredCommand",
+        "mac": "shift+5 cmd+h",
+        "when": "editorTextFocus",
+        "args": 5
       }
     ]
   },
