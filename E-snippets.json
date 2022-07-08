@@ -1,0 +1,263 @@
+{
+  "Commands invoked with `cmd+h` may provide variations on their behaviour by casing on this value.": {
+    "prefix": "E.currentPrefixArgument ",
+    "body": "E.currentPrefixArgument()$0",
+    "description": "Commands invoked with `cmd+h` may provide variations on their behaviour by casing on this value.\n *\n * ### Example Usage\n * ```\n * commands[\"speak\"] = E => E.currentPrefixArgument ? E.error(\"HELLO\") : E.message(\"Hi\")\n * ```\n * Now we have **two commands for the price of one**:\n * 1. `cmd+h speak` will show *Hi* in a message notification.\n * 2. `shift+cmd+h speak` will show *HELLO* in a red error notification.\n *\n * ### This is more than just a toggle\n * Users may wish to pass arbitrary numeric values to commands, and so commands can have arbitary variations.\n * For instance, a user might add the following keybinding declaration to their VSCode settings, so that\n * `shift+5 cmd+h` will invoke a command and temporarily set `E.currentPrefixArgument` to 5.\n * ```\n * {\n *       \"command\": \"easy-extensibility.executeRegisteredCommand\",\n *       \"mac\": \"shift+5 cmd+h\",\n *       \"when\": \"editorTextFocus\",\n *       \"args\": 5\n * }\n * ```\n * You can then *see* this in-action by invoking the following command with `cmd+h hi`, `shift+cmd+h hi`, and `shift+5 cmd+h hi`.\n * ```\n * commands[\"hi\"] = E => E.message(\"Hi ~ \" + E.currentPrefixArgument)\n * ```\n *\n * ### Brevity & Symmetry\n *\n * For brevity, this extension only defines the binding `shift+cmd+h` which sets `E.currentPrefixArgument = 1`\n * then invokes the usual `cmd+h`. For other values for `E.currentPrefixArgument`, users may alter their personal\n * keybindings, as shown above.\n *\n * For the sake of symmetry, this extension declares the binding `shift+cmd+e`.\n * - It does not involve `E.currentPrefixArgument` at all.\n * - `cmd+e` shows the result of evaluating a selection, or the current line;\n * - `shift+cmd+e` inserts the result on a newline.\n "
+  },
+  " Configurations of the `E` API; e.g., how evaluated text is shown is handled with `E.internal.echoFunction`. ": {
+    "prefix": "E.internal ",
+    "body": "E.internal()$0",
+    "description": " Configurations of the `E` API; e.g., how evaluated text is shown is handled with `E.internal.echoFunction`. "
+  },
+  " This function is called to decide how should evaluated text be shown by the `easy-extensibiliy`'s `cmd+E` keybinding.": {
+    "prefix": "E.internal.echoFunction ",
+    "body": "E.internal.echoFunction(${1:x},${2: typ = typeof x})$0",
+    "description": " This function is called to decide how should evaluated text be shown by the `easy-extensibiliy`'s `cmd+E` keybinding.\n * - The default is to show a `E.message` of a given value `x` along with its type.\n * - Other useful functions include `E.overlay` or `E.insert`.\n "
+  },
+  " Ensure input `x` is a string; if it's not, then stringify it. ": {
+    "prefix": "E.string ",
+    "body": "E.string(x)$0",
+    "description": " Ensure input `x` is a string; if it's not, then stringify it. "
+  },
+  " Show JavaScript item `it` in a VSCode information notification; `it` is ensured to be a `E.string`.": {
+    "prefix": "E.message ",
+    "body": "E.message(${1:it},${2: ...buttons})$0",
+    "description": " Show JavaScript item `it` in a VSCode information notification; `it` is ensured to be a `E.string`.\n *\n * Optionally, `buttons` is an array of strings that are used as buttons; the result of the `E.message` is a thennable\n * that refers to the user's button click, if any.\n *\n * #### Examples\n * ```\n * // Common usage\n * E.message(\"Hello, world!\")\n *\n * // Usage with 2 buttons\n * E.message(\"Are you doing well?\", \"Super duper\", \"No, not really\")\n * .then(response => response == \"Super duper\" ? E.message(\"Yay 😊\") : E.error(\"I'm here for you 🫂\"))\n * ```\n * ### See also\n * `E.warning`, `E.error`, `E.overlay`, `E.insert`.\n "
+  },
+  " Show JavaScript item `it` in a VSCode warning notification; `it` is ensured to be a `E.string`.": {
+    "prefix": "E.warning ",
+    "body": "E.warning(${1:it},${2: ...buttons})$0",
+    "description": " Show JavaScript item `it` in a VSCode warning notification; `it` is ensured to be a `E.string`.\n *  - See the documentation for `E.message` regarding similar example uses.\n "
+  },
+  " Show JavaScript item `it` in a VSCode error notification; `it` is ensured to be a `E.string`.": {
+    "prefix": "E.error ",
+    "body": "E.error(${1:it},${2: ...buttons})$0",
+    "description": " Show JavaScript item `it` in a VSCode error notification; `it` is ensured to be a `E.string`.\n *  - See the documentation for `E.message` regarding similar example uses.\n "
+  },
+  " Given a string `str`, produce an overlay showing it at the end of the line; return its overlay decoration config.": {
+    "prefix": "E.overlay ",
+    "body": "E.overlay(str)$0",
+    "description": " Given a string `str`, produce an overlay showing it at the end of the line; return its overlay decoration config.\n *\n * ### Overlays are one-per-line: Only the final `E.overlay` call yields an observable effect.\n * ```\n * E.overlay(\"Hello\"); E.overlay(\"World!\")\n * ```\n * Is essentially the same as just:\n * ```\n * E.overlay(\"World!\")\n * ```\n "
+  },
+  " Move cursor forward to the next character, or `n`-many characters.": {
+    "prefix": "E.nextChar ",
+    "body": "E.nextChar(${1:n = 1})$0",
+    "description": " Move cursor forward to the next character, or `n`-many characters.\n * - `n` is a number.\n * - Move backward when `n` is negative.\n *\n * Movement is limited to the current line: If `n` is too large, we just move to the 0th column of the next line.\n "
+  },
+  " Move cursor forward to the next line, or `n`-many lines.": {
+    "prefix": "E.nextLine ",
+    "body": "E.nextLine(${1:n = 1})$0",
+    "description": " Move cursor forward to the next line, or `n`-many lines.\n * - `n` is a number.\n * - Move backward when `n` is negative.\n "
+  },
+  " Move cursor to the end of the current line. ": {
+    "prefix": "E.endOfLine ",
+    "body": "E.endOfLine(${1:})$0",
+    "description": " Move cursor to the end of the current line. "
+  },
+  " Move cursor to the start of the current line. ": {
+    "prefix": "E.startOfLine ",
+    "body": "E.startOfLine(${1:})$0",
+    "description": " Move cursor to the start of the current line. "
+  },
+  " Move cursor to the last line of the editor. ": {
+    "prefix": "E.endOfEditor ",
+    "body": "E.endOfEditor(${1:})$0",
+    "description": " Move cursor to the last line of the editor. "
+  },
+  " Move cursor to the first line of the editor. ": {
+    "prefix": "E.startOfEditor ",
+    "body": "E.startOfEditor(${1:})$0",
+    "description": " Move cursor to the first line of the editor. "
+  },
+  " Move cursor to the given `line` number and `column` number. ": {
+    "prefix": "E.gotoLine ",
+    "body": "E.gotoLine(${1:line},${2: column})$0",
+    "description": " Move cursor to the given `line` number and `column` number. "
+  },
+  " Save cursor location, execute `callback`, then return to the orginal cursor location.": {
+    "prefix": "E.saveExcursion ",
+    "body": "E.saveExcursion(callback)$0",
+    "description": " Save cursor location, execute `callback`, then return to the orginal cursor location.\n *\n * This is useful for methods that move the cursor to do some work, like grabbing text from some random line,\n * but we don't want to confuse the user with unexpected cursor movements, so we restore them when the underlying task is done.\n *\n * ### Example\n * ```\n * // Echo the contents of the first line, but leave cursor at its current position.\n * E.saveExcursion(_ => {E.startOfEditor(); E.copy().then(E.message) })\n * ```\n *\n * TODO: We might move the cursor to a different editor, so ideally we save the current editor as well and restore it.\n "
+  },
+  "  Insert text at current cursor position;  `it` is ensured to be a `E.string`. ": {
+    "prefix": "E.insert ",
+    "body": "E.insert(it)$0",
+    "description": "  Insert text at current cursor position;  `it` is ensured to be a `E.string`. "
+  },
+  " Insert a new line and move cursor to start of it. ": {
+    "prefix": "E.newLine ",
+    "body": "E.newLine(${1:})$0",
+    "description": " Insert a new line and move cursor to start of it. "
+  },
+  " Insert string `str` at the given `line` number and `col`umn number.": {
+    "prefix": "E.insertAt ",
+    "body": "E.insertAt(${1:line},${2: col},${3: str})$0",
+    "description": " Insert string `str` at the given `line` number and `col`umn number.\n * - If the line ends before the specified `col`, then insert the text at the final column (ie end of line).\n "
+  },
+  " Save all editors. ": { "prefix": "E.saveAll ", "body": "E.saveAll(${1:})$0", "description": " Save all editors. " },
+  " Perform a super simple textual find-replace on the current editor.": {
+    "prefix": "E.findReplace ",
+    "body": "E.findReplace(${1:oldy},${2: newy},${3: file = E.currentFileName})$0",
+    "description": " Perform a super simple textual find-replace on the current editor.\n * #### Example use\n * ```\n * E.findReplace(\"Hi buddo!\", \"Hola\") // This will alter this exact file, and replace the first phrase with the second!\n * ```\n "
+  },
+  " Read a string, possibly with completion.": {
+    "prefix": "E.readInput ",
+    "body": "E.readInput(${1:prompt},${2: choices})$0",
+    "description": " Read a string, possibly with completion.\n *\n * - `prompt?: string` An optional string to show as placeholder in the input box to guide the user what to type.\n * - `choices?: undefined | string[] | object` The collection of completion candidates, if any.\n *\n * The result depends on whether `choices` is provided or not, and it's type:\n * 1. If `choices` is not provided, then the result is the string the user entered.\n * 2. If `choices` is an array of strings, then the result is one of those array elements. (As entered by the user.)\n * 3. If `choices` is an object, then the completions are the keys (from which the user can enter) and the result is the associated value.\n *\n * #### Examples\n * ```\n * // Get an input and try to convert it to a number, then show its double in a message\n * E.readInput().then(Number).then(x => E.message(2 * x))\n *\n * // Alternatively, using E's await:\n * {\n *   let it = await E.readInput(\"Favorite number?\")\n *   let double = Number(it) * 2\n *   E.message(double)\n * }\n *\n * // Let user select from options `parent` and `son`, but whose values are `Musa` and `Yusuf`, respectively.\n * E.completingRead('Who?', { parent: 'Musa', son: 'Yusuf' }).then(E.message)\n * ```\n * #### Example Application: Open favourite video in browser\n * ```\n * // Completing read, for videos I like to have in the background\n * E.readInput('What do you want to listen to?',\n *  {\n *   'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',\n *   'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',\n *   'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts'\n * }).then(E.browseURL)\n * ```\n * "
+  },
+  " Get the current line number as, well, a number. ": {
+    "prefix": "E.currentLineNumber ",
+    "body": "E.currentLineNumber(${1:})$0",
+    "description": " Get the current line number as, well, a number. "
+  },
+  " Get the number of the final line of the current active edtior. ": {
+    "prefix": "E.lastLineNumber ",
+    "body": "E.lastLineNumber(${1:})$0",
+    "description": " Get the number of the final line of the current active edtior. "
+  },
+  " Get the contents of line `n` as a string. ": {
+    "prefix": "E.lineAt ",
+    "body": "E.lineAt(n)$0",
+    "description": " Get the contents of line `n` as a string. "
+  },
+  " Get the string contents of the first line. ": {
+    "prefix": "E.firstLine ",
+    "body": "E.firstLine(${1:})$0",
+    "description": " Get the string contents of the first line. "
+  },
+  " Get the string contents of the last line. ": {
+    "prefix": "E.lastLine ",
+    "body": "E.lastLine(${1:})$0",
+    "description": " Get the string contents of the last line. "
+  },
+  " Get the current line's contents as a string. ": {
+    "prefix": "E.currentLine ",
+    "body": "E.currentLine(${1:})$0",
+    "description": " Get the current line's contents as a string. "
+  },
+  " Get the entire contents of the current editor, as a string. ": {
+    "prefix": "E.editorContents ",
+    "body": "E.editorContents(${1:})$0",
+    "description": " Get the entire contents of the current editor, as a string. "
+  },
+  " Erase all contents of an editor, and replace its contents with the given string `replacement`, if any. ": {
+    "prefix": "E.clearEditor ",
+    "body": "E.clearEditor(${1:replacement = ''})$0",
+    "description": " Erase all contents of an editor, and replace its contents with the given string `replacement`, if any. "
+  },
+  " Get selected region, as string. ": {
+    "prefix": "E.selection ",
+    "body": "E.selection(${1:})$0",
+    "description": " Get selected region, as string. "
+  },
+  " Replaced the selected region with the given string `str`. ": {
+    "prefix": "E.replaceSelection ",
+    "body": "E.replaceSelection(str)$0",
+    "description": " Replaced the selected region with the given string `str`. "
+  },
+  " Replace the selected text `X` by the result of `f(X)`. ": {
+    "prefix": "E.replaceSelectionBy ",
+    "body": "E.replaceSelectionBy(f)$0",
+    "description": " Replace the selected text `X` by the result of `f(X)`. "
+  },
+  " Retrieve current selected region if it contains non-whitespace, otherwise get the entirety of the current line. ": {
+    "prefix": "E.selectionOrEntireLine ",
+    "body": "E.selectionOrEntireLine(${1:})$0",
+    "description": " Retrieve current selected region if it contains non-whitespace, otherwise get the entirety of the current line. "
+  },
+  " Select text from current cursor position until the end of the current line.": {
+    "prefix": "E.endOfLineSelect ",
+    "body": "E.endOfLineSelect(${1:})$0",
+    "description": " Select text from current cursor position until the end of the current line.\n * - This method starts a selection of a region, it does not return any text by itself.\n * - See also `E.copyLine`.\n "
+  },
+  " Select text from current cursor position until the start of the current line.": {
+    "prefix": "E.startOfLineSelect ",
+    "body": "E.startOfLineSelect(${1:})$0",
+    "description": " Select text from current cursor position until the start of the current line.\n * - This method starts a selection of a region, it does not return any text by itself.\n * - See also `E.copyLine`.\n "
+  },
+  " Get the clipboard contents, as a promised string.": {
+    "prefix": "E.clipboardRead ",
+    "body": "E.clipboardRead()$0",
+    "description": " Get the clipboard contents, as a promised string.\n * #### Examples\n * ```\n * // What's in the clipboard?\n * E.clipboardRead().then(E.message)\n *\n * // Insert the contents of the clipboard; [First approach]\n * E.paste()\n *\n * // Insert the contents of the clipboard; [Second approach]\n * E.clipboardRead().then(E.insert)\n * ```\n * ### See Also\n * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.\n "
+  },
+  " Write the given string to the clipboard.": {
+    "prefix": "E.clipboardWrite ",
+    "body": "E.clipboardWrite()$0",
+    "description": " Write the given string to the clipboard.\n * #### Examples\n * ```\n * // Save something to the clipboard.\n * E.clipboardWrite(\"Hiya\")\n *\n * // Check that the clipboard currently holds what we believe it does.\n * E.clipboardRead().then(x => E.message(x === \"Hiya\"))\n *\n * // Insert the contents of the clipboard; [First approach]\n * E.paste()\n *\n * // Insert the contents of the clipboard; [Second approach]\n * E.clipboardRead().then(E.insert)\n * ```\n * ### See Also\n * `E.copy`, `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.\n "
+  },
+  " Copy current line, or any active selection. Returns a promise.": {
+    "prefix": "E.copy ",
+    "body": "E.copy(${1:})$0",
+    "description": " Copy current line, or any active selection. Returns a promise.\n * #### Examples\n * ```\n * // Copy current line, then make use of the string that has been copied.\n * E.copy().then(x => E.message(x))\n *\n * // Or using E's await:\n * {\n * \tlet x = await E.copy()\n * \tlet y = x.toUpperCase()\n * \tE.message(y)\n * }\n *\n * // Copy the current line, then immediately paste it back, twice\n * E.copy(); E.paste(); E.paste()\n * ```\n * ### See Also\n * `E.cut`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.\n "
+  },
+  " Cut current line, or any active selection. Returns a promise.": {
+    "prefix": "E.cut ",
+    "body": "E.cut(${1:})$0",
+    "description": " Cut current line, or any active selection. Returns a promise.\n * #### Examples\n * ```\n * // Cut current line, then make use of the string that has been cut.\n * E.cut().then(x => E.message(x))\n * ```\n * ### See Also\n * `E.copy`, `E.paste`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.\n "
+  },
+  " Paste current clipboard contents, overwriting any active selection. Returns a promise.": {
+    "prefix": "E.paste ",
+    "body": "E.paste(${1:})$0",
+    "description": " Paste current clipboard contents, overwriting any active selection. Returns a promise.\n * #### Examples\n * ```\n * // Paste clipboard contents, then make use of the string that has been pasted.\n * E.paste().then(E.message)\n * ```\n * ### See Also\n * `E.copy`, `E.cut`, `E.clipboardRead`, `E.clipboardWrite`, `E.copyLine`.\n "
+  },
+  " Copy the contents of the current line, or a given numeric `line` number. ": {
+    "prefix": "E.copyLine ",
+    "body": "E.copyLine(${1:line = E.currentLineNumber})$0",
+    "description": " Copy the contents of the current line, or a given numeric `line` number. "
+  },
+  " Get the name of the current file, editor, as a string.": {
+    "prefix": "E.currentFileName ",
+    "body": "E.currentFileName(${1:})$0",
+    "description": " Get the name of the current file, editor, as a string.\n *\n * For example, within my `~/init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentFileName() //  ⇒  /Users/musa/init.js\n * ```\n "
+  },
+  " Get the name of the directory that contains the current file, editor, as a string.": {
+    "prefix": "E.currentDirectory ",
+    "body": "E.currentDirectory(${1:})$0",
+    "description": " Get the name of the directory that contains the current file, editor, as a string.\n *\n * For example, within my `~/init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentDirectory() //  ⇒  /Users/musa/\n * ```\n "
+  },
+  " Run a shell command and get the result as promised object of `{stdout: string, stderr: string}`.": {
+    "prefix": "E.shell ",
+    "body": "E.shell(${1:cmd})$0",
+    "description": " Run a shell command and get the result as promised object of `{stdout: string, stderr: string}`.\n *\n * #### Examples\n * ```\n * // Who is the current user?\n * E.shell('whoami').then(x => E.message(x.stdout))\n *\n * // Make me smile! (Using E's await).\n * E.message((await E.shell('fortune')).stdout)\n *\n * // Run an arbitrary command-line function on the current file; namely prettier.\n * E.shell(`prettier --write ${E.currentFileName()}`)\n *\n * // Set a Git credential: I'd like to use VSCode when doing Git tasks off the command line\n * E.shell(`git config --global core.editor \"code --wait\"`)\n *\n * // See your Git credentials: Name, email, editor, etc.\n * E.shell(\"git config --list\").then(x => (E.insert(x.stdout)))\n * ```\n "
+  },
+  " Create a new terminal, within VSCode, that runs the given string command `cmd`.": {
+    "prefix": "E.terminal ",
+    "body": "E.terminal(${1:cmd},${2: title = cmd})$0",
+    "description": " Create a new terminal, within VSCode, that runs the given string command `cmd`.\n *  Title the resulting terminal with the given `title` string.\n *\n *  Result value is of type `vscode.Terminal`.\n *\n * ### Example Usage: Extension Idea: Run arbitrary CLI commands on the current file & see the result\n * ```\n * commands[\"Run gulp tests\"] = E => E.terminal(`npx gulp test-partial --file=${E.currentFileName()}`, \"Gulp!\")\n * ```\n * - Now `cmd+h gulp` will actually run your Gulp tests *only* on the current file.\n * - Note: There is an awesome *Tasks Explorer* VSCode extension which will show available commands to run, such as gulp;\n *   but it does not provide the fine-grained capability of this particular example ---namely, to be run on the current file only.\n *\n * #### Even better would be to change the behaviour of this command, on the fly\n * With the code below, `cmd+h gulp` will run Gulp on the current file,\n * whereas `shift+cmd+h` will run the Gulp precommit task for the entire repo.\n * ```\n * commands[\"Run gulp tests\"] = E => {\n *   const cmd = E.currentPrefixArgument ? 'gulp precommit' : `npx gulp test-partial --file=${E.currentFileName()}`\n *   E.terminal(cmd, 'Gulp!')\n *  }\n * ```\n "
+  },
+  " Make a new webpanel with the given `title` string, that renders the given `html` string.": {
+    "prefix": "E.newWebPanel ",
+    "body": "E.newWebPanel(${1:title},${2: html})$0",
+    "description": " Make a new webpanel with the given `title` string, that renders the given `html` string.\n *\n * #### Example Use\n * ```\n * E.shell(\"fortune\").then(x => E.newWebPanel('Fortune!', `<marquee>${x.stdout}</marquee>`))\n * ```\n *\n * See docs: https://code.visualstudio.com/api/extension-guides/webview\n "
+  },
+  " Browse to a given `url` string, using the OS default browser.": {
+    "prefix": "E.browseURL ",
+    "body": "E.browseURL(url)$0",
+    "description": " Browse to a given `url` string, using the OS default browser.\n * #### Example Usage\n * ```\n * E.browseURL(\"www.icanhazdadjoke.com\")\n * ```\n "
+  },
+  " Executes the command denoted by the given command identifier.": {
+    "prefix": "E.executeCommand ",
+    "body": "E.executeCommand()$0",
+    "description": " Executes the command denoted by the given command identifier.\n *\n * #### Usage Instructions\n * 1. Press `Cmd+Shift+P`, find your desired command, then click on the gear icon next to its title.\n * 2. Now you are in a keyboard shortcuts settings page, right click on the command title and select\n *    `Copy Command ID`.\n * 3. Now you can use `E.executeCommand(...)`, and paste whatever you copied into the `...` position.\n *\n * #### Example\n * ```\n * // Show every key stroke I press in a nice large pane near the middle-bottom of my screen!\n * E.executeCommand('workbench.action.toggleScreencastMode')\n * ```\n "
+  },
+  " Execute `callback` on the current active editor, if any; otherwise return `null`.": {
+    "prefix": "E.withEditor ",
+    "body": "E.withEditor(callback)$0",
+    "description": " Execute `callback` on the current active editor, if any; otherwise return `null`.\n *\n * #### Example\n * ```\n * // Disable line numbers in the currently active editor\n * E.withEditor(e => e.options.lineNumbers = 0)\n * ```\n "
+  },
+  " A toggling mechanism that is more unfirm that the defaults and is larger.": {
+    "prefix": "E.toggle ",
+    "body": "E.toggle()$0",
+    "description": " A toggling mechanism that is more unfirm that the defaults and is larger.\n *\n * The default vscode API provides inconsistently named toggeling commands,\n * such as\n * - `workbench.action.togglePanel`\n * - `workbench.action.toggleStatusbarVisibility`\n * - `workbench.action.toggleActivityBarVisibility`\n * The first is inconsistent with the latter two since it does not mention the suffix `Visibility`,\n * and the latter two are inconsistent amongst themselves with regards to casing: `Statusbar` and not `StatusBar`.\n *\n * This collection of toggle functions are all camelCase ---notably `statusBar` and `activityBar`, for the sake of consistency.\n *\n * This collection is larger since it includes things such as toggles for line numbers and cursor styles.\n "
+  },
+  " Show every key stroke I press in a nice large pane near the middle-bottom of my screen? */": {
+    "prefix": "E.findFile ",
+    "body": "E.findFile(path)$0",
+    "description": " Show every key stroke I press in a nice large pane near the middle-bottom of my screen? */\n  screencast: () => E.executeCommand('workbench.action.toggleScreencastMode'),\n\n  /** Toggle whether we are in fullscreen mode or not. */\n  fullscreen: () => E.executeCommand('workbench.action.toggleFullScreen'),\n\n  /** Toggle the visibility of the bottom-most panel (with Problems, Output, Terminal, etc). */\n  panel: () => E.executeCommand('workbench.action.togglePanel'),\n\n  /** Hide all editors; show only panel; useful when want to focus on panel; cmd+j to bring back editors. */\n  editors: () => E.executeCommand('workbench.action.toggleEditorVisibility'),\n\n  /** Example usage:  `E.toggle.sidebar(true); E.toggle.sidebar()`  where the first moves position, then the second makes it visible. */\n  sideBar: presenceOrPosition =>\n    E.executeCommand(`workbench.action.toggleSidebar${presenceOrPosition ? 'Position' : 'Visibility'}`),\n\n  /** Show the bottom-most mode-line, which displays things like line-number, branch name, etc? */\n  statusBar: () => E.executeCommand('workbench.action.toggleStatusbarVisibility'),\n\n  /** Toggle the visibility of the left-most panel; which mentions `Source Control`, `Extensions`, etc. */\n  activityBar: () => E.executeCommand('workbench.action.toggleActivityBarVisibility'),\n\n  // Hide tabs; navigate between tabs via C-x <-/->\n  tabs: () => E.executeCommand('workbench.action.toggleTabsVisibility'),\n\n  breadcrumbs: () => E.executeCommand('breadcrumbs.toggle'),\n\n  /** Either toggle line numbers on or off.\n   *\n   * When `n` is provided, it can be one of the following *numeric* values:\n   * 0 off; 1 on; 2 relative.\n   */\n  lineNumbers: n => E.withEditor(e => (e.options.lineNumbers = n || +!e.options.lineNumbers)),\n\n  /** Either toggle the cursor style between the default thick line and the underline cursor.\n   *\n   * When `n` is provided, it can be one of the following *numeric* values:\n   * 1 thick line; 2 filled block; 3 underline; 4 thin line; 5 block outline; 6 thin underline.\n   */\n  cursorStyle: n => E.withEditor(e => (e.options.cursorStyle = n || e.options.cursorStyle === 1 ? 3 : 1)),\n\n  /** Instead of seeing typos in the `Problems` pane in the bottom-most panel, toggle whether they should be shown inline.\n   * [This requires the `Error Lens` extension by user `Alexander`.]\n   */\n  errorLens: () => E.executeCommand('errorLens.toggleError'),\n\n  /** Should spelling mistakes be shown inline, along with suggestions?\n   * [This requies the `Code Spell Checker` extension by user `Street Side Software`.]\n   */\n  spellChecking: () => E.executeCommand('cSpell.toggleEnableSpellChecker'),\n\n  /** Toggle whether the active editor should occupy the center of the screen; with whitespace on the sides. */\n  centeredLayout: () => E.executeCommand('workbench.action.toggleCenteredLayout'),\n\n  /** Toggle whether there is a tiny map showing an overview of the code and your current location in it. */\n  minimap: () => E.executeCommand('editor.action.toggleMinimap'),\n\n  /** Should whitespace be shown as (uneditable) dots? */\n  showWhitespace: () => E.executeCommand('editor.action.toggleRenderWhitespace')\n}\n\n// init.js ================================================================================\n\n/** Opens a given file `path` string in the current VSCode instance.\n * - Since this is async, it takes a second sometimes.\n *\n * #### Example Usage\n * ```\n * E.findFile(\"~/Downloads/woah.js\")\n * ```\n "
+  },
+  " Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.": {
+    "prefix": "E.readFile ",
+    "body": "E.readFile(path)$0",
+    "description": " Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.\n * #### Examples\n * ```\n * // Using an absolute path\n * E.readFile('Users/musa/init.js').then(x => E.message(x))\n *\n * // Using a relative path\n * E.readFile('~/init.js').then(E.message)\n *\n * // Evaluating file contents; dangerous. Useful for dynamically-scoped programming.\n * E.readFile('~/init.js').then(eval)\n * ```\n "
+  }
+}

@@ -2,9 +2,9 @@
   "name": "easy-extensibility",
   "displayName": "easy-extensibility",
   "description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "repository": "https://github.com/alhassy/easy-extensibility",
-  "icon": "graphics/logo.png",  
+  "icon": "graphics/logo.png",
   "publisher": "alhassy",
   "engines": {
     "vscode": "^1.68.0"
@@ -19,6 +19,12 @@
   ],
   "main": "./extension.js",
   "contributes": {
+    "snippets": [
+      {
+        "language": "javascript",
+        "path": "./E-snippets.json"
+      }
+    ],
     "commands": [
       {
         "command": "easy-extensibility.evaluateSelection",

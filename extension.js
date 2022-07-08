@@ -1,15 +1,36 @@
-/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on-the-fly.
- * 
+/* Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on-the-fly.
+ *
  * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with `cmd+h`.
- * 
- * - There is no edit-load-debug cycle; just edit-then-use! 
+ *
+ * - There is no edit-load-debug cycle; just edit-then-use!
  * - Then when you're happy with what you have, you form a full extension ---involved default approach 😱!
  * - Or, better yet, save your extensions in an `init.js` file ---new lightweight approach 🤗!
- * 
+ *
  * # Accessibility
  * - Invoke `cmd+h tutorial` to read the tutorial on using this extension.
  * - To learn about “saving reusable functions and having them load automatically”, invoke `cmd+h find users init.js file, or provide a template`.
  */
+
+/* Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
+
+let file = require('fs').readFileSync('/Users/musa/easy-extensibility/extension.js').toString()
+let pattern = /\*\*([\S\s]*?)\*\/\sE\.([^=]*)=((.*)=>)?(.*)/g
+let snippets = {}
+file.match(E.pattern).forEach(it => {
+  let [_, docs, name, __, args, ___] = /\*\*([\S\s]*?)\*\/\sE\.([^=]*)=((.*)=>)?(.*)/.exec(it)
+  let key = docs.split('\n')[0]
+  args = args?.trim() || ''
+  if (args.startsWith('(')) {
+    args = args.replace(/\(|\)/g, '') // remove parens
+    args = args.split(',').map((it, i) => '${' + (i + 1) + ':' + it + '}') // Add tab stops along with param hints
+    args = args.join(',')
+    args = `(${args})`
+  } else args = `(${args})`
+  snippets[key] = { prefix: `E.${name}`, body: `E.${name.trim()}${args}` + '$0', description: docs }
+})
+// make the json file!
+require('fs').writeFileSync('/Users/musa/easy-extensibility/E-snippets.json', JSON.stringify(snippets))
+*/
 
 // vscode, E, commands ================================================================================
 
@@ -507,6 +528,12 @@ E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
  *
  * // Run an arbitrary command-line function on the current file; namely prettier.
  * E.shell(`prettier --write ${E.currentFileName()}`)
+ *
+ * // Set a Git credential: I'd like to use VSCode when doing Git tasks off the command line
+ * E.shell(`git config --global core.editor "code --wait"`)
+ *
+ * // See your Git credentials: Name, email, editor, etc.
+ * E.shell("git config --list").then(x => (E.insert(x.stdout)))
  * ```
  */
 E.shell = require('util').promisify(require('child_process').exec)

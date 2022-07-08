@@ -39,6 +39,19 @@ Extend VSCode without the ceremony of making a full extension! Just write your c
 The `E API` is well-documented; for example the `E.readInput` method's docs even suggest an example user extension. 🚀
 ![Extensive Docs](graphics/extensive-docs.png)
 
+#### Anaphoric Usage (with code completion & docstrings)
+
+The current implementation treats VSCode  as if it were dynamically-scoped: Any open editor may mention `E, commands, vscode` with *no ceremonial import* of any kind!
+- This is similar to the use of the keyword `this` in object-oriented programming: It's an implicitly introduced argument!
+
+However, for discovarability and example uses, it would be nice
+to have code completetion: Just write `E.` and wait a second to
+see possible completions ---or write the name of the method you
+want to use and if it's part of the `E` API, you'll also get completion as shown below.
+
+![Code completetion with docstrings](graphics/completion.gif)
+
+
 #### A growing user-friendly API!
 ![Growing API](graphics/api.png)
 ## Why this (meta)extension?
