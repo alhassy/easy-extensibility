@@ -131,6 +131,37 @@ E.internal = {}
  */
 E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)} ~ ${typ}`)
 
+// set ================================================================================
+
+/** Set a given editor configuration.
+ * 
+ * Using this function alters your `settings.json`.
+ * In essence, this function makes `init.js` a dynamic JS programmatic replacement 
+ * over the static JSON configuration `settings.json`.
+ * 
+ * ### Example Uses
+ * ```
+ * E.set("editor.fontSize", 14) // I'd like a large font... I should wear my glasses more often.
+ * 
+ * E.set("workbench.colorTheme", "Solarized Light") // Use a neato theme
+ * // Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
+ * 
+ * E.set("semantic-highlighting.isEnable", true) // colors-as-types!
+ * 
+ * // Add a motavational motto to the VSCode frame window title
+ * E.set("window.title", "${activeEditorLong} Living The Dream (•̀ᴗ•́)و")
+ * ```
+ */
+ E.set = (key, value) => {
+  let settings = JSON.parse(require("fs").readFileSync(E.internal.set.path));
+  settings[key] = value
+  require("fs").writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2));
+  return {key, value}
+}
+
+/** The path used by `E.set` to find the user's `settings.json` file. */
+E.internal.set = {path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
+
 // bindKey ================================================================================
 
 /** Bind `key` sequence to the given `command` name (only `when` predicate is true).
@@ -162,6 +193,9 @@ E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)}
   require("fs").writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
   return ({ key, command, when })  
 }
+
+/** The path used by `E.set` to find the user's `settings.json` file. */
+E.internal.bindKey = {path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json`}
 
 // String, Message, Error ================================================================================
 
