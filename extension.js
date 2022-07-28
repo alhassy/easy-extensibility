@@ -131,6 +131,38 @@ E.internal = {}
  */
 E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)} ~ ${typ}`)
 
+// bindKey ================================================================================
+
+/** Bind `key` sequence to the given `command` name (only `when` predicate is true).
+ * 
+ * ### Example Use
+ * ```
+ * // Press Cmd+m to select current word, then again to select current expression, then again for current line/scope.
+ * // Using "r" for ever-expanding-"R"egion
+ * E.bindKey("cmd+r", "editor.action.smartSelect.expand")
+ * ```
+ * 
+ * ### How to find out what command is bound to a specific key?
+ * 
+ *   `Cmd+Shift+P  Default Keyboard Shortcuts Cmd+P @`Now-enter-your-key-sequence
+ * 
+ * ### How to remove a key binding from an action? E.g. Remove `Cmd+Shift+K` from `Delete Lines`.
+ *   ```
+ *    E.bindKey("cmd+shift+k", undefined)
+ *    ```
+ */
+ E.bindKey = (key, command, when = "editorTextFocus") => {
+  // ? Note: We likely want to parse using `hjson` instead!
+  // Remove starting comment
+  let keys = require("fs").readFileSync(E.internal.bindKey.path).toString().replace("// Place your key bindings in this file to override the defaults", "")
+  keys = JSON.parse(keys)
+  // Override any existing binding for the given key.
+  keys = keys.filter(binding => binding.key !== key)
+  keys.push({ key, command, when })    
+  require("fs").writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
+  return ({ key, command, when })  
+}
+
 // String, Message, Error ================================================================================
 
 /** Ensure input `x` is a string; if it's not, then stringify it. */
@@ -306,6 +338,7 @@ E.internal.decorateRegexp = { styles: {} }
  * // I like the "#"-syntax since it's reminiscent of Markdown section markers.
  * E.decorateRegexp(/#.* #/, {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" })
  * ```
+ * 
  * ### See also
  * `E.rxEscape` This escapes regular expression operators in strings.
  */
@@ -641,6 +674,8 @@ E.copyLine = (line = E.currentLineNumber()) =>
 
 /** Get the name of the current file, editor, as a string.
  *
+ * Returns the path to the (file displayed by the) currently active editor (window pane). 
+ * 
  * For example, within my `~/init.js` pressing `cmd+e` on the following:
  * ```
  * E.currentFileName() //  ⇒  /Users/musa/init.js
