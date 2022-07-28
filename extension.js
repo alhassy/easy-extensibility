@@ -136,7 +136,7 @@ E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)}
 /** Ensure input `x` is a string; if it's not, then stringify it. */
 E.string = x => (typeof x === 'string' ? x : JSON.stringify(x))
 
-/** Show JavaScript item `it` in a VSCode information notification; `it` is ensured to be a `E.string`.
+/** Show JavaScript item `obj` in a VSCode information notification; `obj` is ensured to be a `E.string`.
  *
  * Optionally, `buttons` is an array of strings that are used as buttons; the result of the `E.message` is a thennable
  * that refers to the user's button click, if any.
@@ -153,17 +153,17 @@ E.string = x => (typeof x === 'string' ? x : JSON.stringify(x))
  * ### See also
  * `E.warning`, `E.error`, `E.overlay`, `E.insert`.
  */
-E.message = (it, ...buttons) => vscode.window.showInformationMessage(E.string(it), ...buttons)
+E.message = (obj, ...buttons) => vscode.window.showInformationMessage(E.string(obj), ...buttons)
 
-/** Show JavaScript item `it` in a VSCode warning notification; `it` is ensured to be a `E.string`.
+/** Show JavaScript item `obj` in a VSCode warning notification; `obj` is ensured to be a `E.string`.
  *  - See the documentation for `E.message` regarding similar example uses.
  */
-E.warning = (it, ...buttons) => vscode.window.showWarningMessage(E.string(it), ...buttons)
+E.warning = (obj, ...buttons) => vscode.window.showWarningMessage(E.string(obj), ...buttons)
 
-/** Show JavaScript item `it` in a VSCode error notification; `it` is ensured to be a `E.string`.
+/** Show JavaScript item `obj` in a VSCode error notification; `obj` is ensured to be a `E.string`.
  *  - See the documentation for `E.message` regarding similar example uses.
  */
-E.error = (it, ...buttons) => vscode.window.showErrorMessage(E.string(it), ...buttons)
+E.error = (obj, ...buttons) => vscode.window.showErrorMessage(E.string(obj), ...buttons)
 
 // Overlays ================================================================================
 E.overlayType = vscode.window.createTextEditorDecorationType({
@@ -180,7 +180,16 @@ vscode.window.onDidChangeTextEditorSelection(event => {
   if ([Command, Keyboard].includes(event.kind)) E.withEditor(ed => ed.setDecorations(E.overlayType, []))
 })
 
-/** Given a string `str`, produce an overlay showing it at the end of the line; return its overlay decoration config.
+/** Show JavaScript item `obj` in an overlay at the end of the line; `obj` is ensured to be a `E.string`.
+ * Return the resulting overlay decoration config.
+ *
+ * ### Example Use
+ * ```
+ * E.internal.echoFunction = obj => E.overlay(`⮕ ${obj}`)
+ * 4 + 5 // Cmd+E shows the result HERE, on this line, in an overlay; not far below in the right-most corner.
+ * ```
+ *
+ * Other useful arrows: ⬅ ⮕ ⬆ ⬇
  *
  * ### Overlays are one-per-line: Only the final `E.overlay` call yields an observable effect.
  * ```
@@ -191,15 +200,147 @@ vscode.window.onDidChangeTextEditorSelection(event => {
  * E.overlay("World!")
  * ```
  */
-E.overlay = str => {
+E.overlay = obj => {
   const editor = vscode.window.activeTextEditor
   if (!editor) return
   const decoration = {
     range: editor.selection,
-    renderOptions: { after: { contentText: str } }
+    renderOptions: { after: { contentText: E.string(obj) } }
   }
   editor.setDecorations(E.overlayType, [decoration])
   return decoration // : DecorationOptions
+}
+
+// Decorations ================================================================================
+
+/** Escapes a given string for use in a regular expression */
+E.rxEscape = literal => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+// Implementation note: We replace any regexp operations with a \\ in-front of them.
+// $& means the whole matched string.
+
+/** Collection of style types defined by `E.decorateRegexp`.
+ * 
+ * Internal meta-data required to make E.decorateRegexp work; i.e., to make determinstic.
+*/
+E.internal.decorateRegexp = { styles: {} }
+
+/** Apply `style` to every instance of `regexp` in the currently active editor.
+ *
+ * ### Useful Resources
+ * - https://eloquentjavascript.net/09_regexp.html#:~:text=A%20number%20of%20common%20character%20groups
+ * - The VSCode "Text Regexp" extension, to try out your regexps as you write them!
+ * - The function `E.rxEscape` for forming regexps from string literals.
+ *
+ * ### Arguments
+ * - `rx: RegExp | string`
+ * - `disable: boolean`
+ * - `style: object` with possible keys being a small set of CSS properties ---but in JS `camelCase` rather than in CSS `kebab-case`.
+ *    - CSS styling properties that will be applied to text enclosed by a decoration:
+ *      - `backgroundColor?: string` Background color of the decoration.
+ *      - `outline?: string` ---for more fine-grained control, there are also the CSS properties
+ *         - `outlineColor?, outlineStyle?, outlineWidth?: string`
+ *      - `border?: string` ---for more fine-grained control, there are also the CSS properties
+ *         - `borderColor?, borderRadius?, borderSpacing?, borderStyle?, borderWidth?: string`
+ *      - Sadly there is no supported `fontFamily` option.
+ *      - `textDecoration?: string` The text-decoration shorthand CSS property sets the appearance of decorative lines on text.
+ *          (It is a shorthand for CSS text-decoration-line, text-decoration-color, text-decoration-style, and the newer text-decoration-thickness property.)
+ *          - Line values `underline, overline, linethrough` and any combinations thereof.
+ *          - Style values `solid, double, dotted, dashed, wavy`
+ *          - Color property sets the color of decorations added to text by text-decoration-line.
+ *          - Thickness property sets the stroke thickness of the decoration line that is used on text in an element, such as a line-through, underline, or overline.
+ *      - `cursor?: string`: How should the cursor look? Values are documented at https://www.w3schools.com/cssref/pr_class_cursor.asp
+ *      - `color?: string`
+ *      - `letterSpacing?: string` Increases or decreases the space between characters in a text. E.g., `"10px"`.
+ *      - `gutterIconPath?: string | Uri` An **absolute path** or an URI to an image to be rendered in the gutter.
+ *      - `gutterIconSize?: string` Specifies the size of the gutter icon.
+ *         Available values are 'auto', 'contain', 'cover' and any percentage value.
+ *         For further information: https://msdn.microsoft.com/en-us/library/jj127316(v=vs.85).aspx
+ *      - `overviewRulerColor?: string | ThemeColor` The color of the decoration in the overview ruler. Use rgba() and define transparent colors to play well with other decorations.
+ *
+ *      - `before?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted before the decorated text.
+ *      - `after?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted after the decorated text.
+ *         E.g., `{ after: { border: '0.5px solid #808080' } }`
+ *         - See also the definition of `E.overlay`.
+ *
+ * ### Examples
+ * Note: We use a Unicode star, "✶/", in the examples below since an ASCII star, Shift+8, terminates JSDocs.
+ * ```
+ * // Colour all words "hello" in pink; including: hello HeLlO
+ * E.decorateRegexp(/hello/i, { backgroundColor: "pink" })
+ *
+ * // Disable such decorations
+ * E.decorateRegexp(/hello/i, { backgroundColor: "pink" }, {disable: true})
+ *
+ * // Use a string literal, without worrying about escaping regular expression operators.
+ * E.decorateRegexp(`\\ Did you know 1 + 1 = 2?`,  { backgroundColor: "pink", color: "cyan" })
+ *
+ * // Decorate all words that start with 'B' and end with 'E'; ignoring case
+ * E.decorateRegexp(/B\w*E/i, { backgroundColor: "pink" })
+ *
+ * // All lines mentioning "G" are coloured green, from the "G" to the end of the line.
+ * E.decorateRegexp(/G.✶/, { color: "#98C379" })
+ * // Colour all lines that start with "G" green, and those with "B" to be blue!
+ * E.decorateRegexp(/\nG.✶/, { color: "#98C379" });
+ * E.decorateRegexp(/\nB.✶/, { color: "blue" });
+ *
+ * // [Better Comments!] Colour all lines that start with "// M" maroon, until end of line.
+ * E.decorateRegexp(new RegExp(`\n${E.rxEscape('//')} ✶M.✶`), {color: "maroon"})
+ * // Example usage is below:
+ * //   M    hi there amigo !
+ *
+ * // Add a blue frame around all occurrences of the word "console.log"
+ * // I use this as a visual aid when doing print-debugging so as to remember to remove these prints when I'm done.
+ * E.decorateRegexp("console.log", {outline: "thick double #32a1ce"})
+ *
+ * // Increase spacing of all "Neato" in the current editor, and encircle it in a purple curved box.
+ * E.decorateRegexp("Neato", {outline: "2px ridge rgba(170, 50, 220, .6)", borderRadius: "1rem", letterSpacing: "2px"})
+ *
+ * // A more involved example: Show "Hiya" as if it were a pink button, with a border, underlined in blue cyan, and being green bold
+ * E.decorateRegexp("Hiya", {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" }, {disable: true})
+ *
+ * // Phrases starting with "#:" are emphasised with large wavy lines, to indicate "Look Here!"
+ * E.decorateRegexp(/#:.✶/, {fontStyle: "cursive", textDecoration: "underline overline wavy blue 3px"})
+ *
+ * // Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline.
+ * // I like to use this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.
+ * // I like the "#"-syntax since it's reminiscent of Markdown section markers.
+ * E.decorateRegexp(/#.* #/, {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" })
+ * ```
+ * ### See also
+ * `E.rxEscape` This escapes regular expression operators in strings.
+ */
+E.decorateRegexp = (rx, style = { backgroundColor: 'green' }, options = { disable: false }) => {
+  let ed = vscode.window.activeTextEditor
+  // Ensure input is a regexp with 'g'lobal flag present.
+  if (typeof rx === 'string') rx = new RegExp(E.rxEscape(rx))
+  let regexFlags = [...new Set(('g' + rx.flags).split(''))].join('')
+  rx = new RegExp(rx, regexFlags)
+
+  // Ensure this function is determinstic, with respect to its explicit output value.
+  let key = JSON.stringify(style)
+  let css = E.internal.decorateRegexp.styles[key] || vscode.window.createTextEditorDecorationType(style)
+  E.internal.decorateRegexp.styles[key] = css
+
+  // Actually decorate the given regexp according to the given style, then add some hooks.
+  doDecorate()
+  vscode.window.onDidChangeActiveTextEditor(doDecorate)
+  vscode.workspace.onDidChangeTextDocument(event => doDecorate(vscode.window.activeTextEditor))
+
+  return css
+
+  function doDecorate(editor = ed) {
+    editor.setDecorations(css, []) //* Remove existing decorations
+    if (options.disable) return
+    let text = editor.document.getText()
+    let match
+    let ranges = []
+    while ((match = rx.exec(text))) {
+      let startPos = editor.document.positionAt(match.index)
+      let endPos = editor.document.positionAt(match.index + match[0].length)
+      ranges.push({ range: new vscode.Range(startPos, endPos) })
+    }
+    editor.setDecorations(css, ranges)
+  }
 }
 
 // Navigation ================================================================================
@@ -261,9 +402,9 @@ E.saveExcursion = callback => {
 // Inserts & input ================================================================================
 
 /**  Insert text at current cursor position;  `it` is ensured to be a `E.string`. */
-E.insert = it => {
+E.insert = obj => {
   const editor = vscode.window.activeTextEditor
-  if (editor) editor.edit(editBuilder => editBuilder.insert(editor.selection.active, E.string(it)))
+  if (editor) editor.edit(editBuilder => editBuilder.insert(editor.selection.active, E.string(obj)))
 }
 
 /** Insert a new line and move cursor to start of it. */
@@ -534,6 +675,9 @@ E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
  *
  * // See your Git credentials: Name, email, editor, etc.
  * E.shell("git config --list").then(x => (E.insert(x.stdout)))
+ * 
+ * // Generate a new UUID and save it to your clipboard; returns a string
+ * let uuid = (await E.shell(`uuidgen | tr '[:upper:]' '[:lower:]' | pbcopy; pbpaste`)).stdout.trim(); E.message(uuid)
  * ```
  */
 E.shell = require('util').promisify(require('child_process').exec)
@@ -699,15 +843,20 @@ E.toggle = {
 
 // init.js ================================================================================
 
-/** Opens a given file `path` string in the current VSCode instance.
- * - Since this is async, it takes a second sometimes.
+/** Opens a given file `path` string in the current VSCode instance. Returns a thennable.
+ * If the `path` does not point to a file, we invoke callback `otherwise`; which defaults to making a new empty file.
  *
- * #### Example Usage
+ * #### Examples
  * ```
- * E.findFile("~/Downloads/woah.js")
+ * // Using an absolute path
+ * E.findFile('Users/musa/init.js')
+ *
+ * // Using a relative path
+ * E.findFile('~/init.js')
  * ```
  */
-E.findFile = path => E.shell(`code ${path}`)
+E.findFile = (path, otherwise = _ => E.shell(`touch ${path}`)) =>
+  vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME))).catch(otherwise)
 
 commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => {
   E.shell(
@@ -717,11 +866,11 @@ commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => 
 }
 
 commands["Find user's ~/init.js file, or provide a template"] = E =>
-  E.shell('file ~/init.js').then(resp => {
-    if (resp.stdout.includes('cannot open'))
-      E.shell('curl -o ~/init.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js')
-    E.findFile('~/init.js')
-  })
+  E.findFile('~/init.js', _ =>
+    E.shell(
+      'curl -o ~/init.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js; code ~/init.js'
+    )
+  )
 
 /** Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.
  * #### Examples
