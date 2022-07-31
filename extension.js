@@ -134,68 +134,79 @@ E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)}
 // set ================================================================================
 
 /** Set a given editor configuration.
- * 
+ *
  * Using this function alters your `settings.json`.
- * In essence, this function makes `init.js` a dynamic JS programmatic replacement 
+ * In essence, this function makes `init.js` a dynamic JS programmatic replacement
  * over the static JSON configuration `settings.json`.
- * 
+ *
  * ### Example Uses
  * ```
  * E.set("editor.fontSize", 14) // I'd like a large font... I should wear my glasses more often.
- * 
+ *
  * E.set("workbench.colorTheme", "Solarized Light") // Use a neato theme
  * // Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
- * 
+ *
  * E.set("semantic-highlighting.isEnable", true) // colors-as-types!
- * 
+ *
  * // Add a motavational motto to the VSCode frame window title
  * E.set("window.title", "${activeEditorLong} Living The Dream (•̀ᴗ•́)و")
+ *
+ *  // Make "=>, !=, ===, <=, >=, <>, etc" look like single-symbol Unicode!
+ * E.set("editor.fontLigatures", true)
  * ```
+ *
+ * ### Useful Reading
+ * https://www.roboleary.net/2021/11/06/vscode-you-dont-need-that-extension2.html
  */
- E.set = (key, value) => {
-  let settings = JSON.parse(require("fs").readFileSync(E.internal.set.path));
+E.set = (key, value) => {
+  let settings = JSON.parse(require("fs").readFileSync(E.internal.set.path))
   settings[key] = value
-  require("fs").writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2));
-  return {key, value}
+  require("fs").writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2))
+  return { key, value }
 }
 
 /** The path used by `E.set` to find the user's `settings.json` file. */
-E.internal.set = {path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
+E.internal.set = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
 
 // bindKey ================================================================================
 
 /** Bind `key` sequence to the given `command` name (only `when` predicate is true).
- * 
+ *
+ * An excellent introduction to customising VSCode keybindings and why you would even
+ * want to add new keybindings can be found at:
+ * https://www.roboleary.net/2022/02/28/vscode-keyboard-fu-custom-keyboard-shortcuts.html
+ * - See also this Keybindings Cheat Sheet: https://code.visualstudio.com/shortcuts/keyboard-shortcuts-macos.pdf
+ *
  * ### Example Use
  * ```
  * // Press Cmd+m to select current word, then again to select current expression, then again for current line/scope.
  * // Using "r" for ever-expanding-"R"egion
  * E.bindKey("cmd+r", "editor.action.smartSelect.expand")
  * ```
- * 
+ *
  * ### How to find out what command is bound to a specific key?
- * 
+ *
  *   `Cmd+Shift+P  Default Keyboard Shortcuts Cmd+P @`Now-enter-your-key-sequence
- * 
+ *
  * ### How to remove a key binding from an action? E.g. Remove `Cmd+Shift+K` from `Delete Lines`.
  *   ```
  *    E.bindKey("cmd+shift+k", undefined)
  *    ```
  */
- E.bindKey = (key, command, when = "editorTextFocus") => {
+E.bindKey = (key, command, when = "editorTextFocus") => {
   // ? Note: We likely want to parse using `hjson` instead!
   // Remove starting comment
   let keys = require("fs").readFileSync(E.internal.bindKey.path).toString().replace("// Place your key bindings in this file to override the defaults", "")
   keys = JSON.parse(keys)
   // Override any existing binding for the given key.
   keys = keys.filter(binding => binding.key !== key)
-  keys.push({ key, command, when })    
+  keys.push({ key, command, when })
   require("fs").writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
-  return ({ key, command, when })  
+  return ({ key, command, when })
 }
 
 /** The path used by `E.set` to find the user's `settings.json` file. */
-E.internal.bindKey = {path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json`}
+E.internal.bindKey = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json` }
 
 // String, Message, Error ================================================================================
 
@@ -285,7 +296,7 @@ E.rxEscape = literal => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 // $& means the whole matched string.
 
 /** Collection of style types defined by `E.decorateRegexp`.
- * 
+ *
  * Internal meta-data required to make E.decorateRegexp work; i.e., to make determinstic.
 */
 E.internal.decorateRegexp = { styles: {} }
@@ -372,7 +383,7 @@ E.internal.decorateRegexp = { styles: {} }
  * // I like the "#"-syntax since it's reminiscent of Markdown section markers.
  * E.decorateRegexp(/#.* #/, {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" })
  * ```
- * 
+ *
  * ### See also
  * `E.rxEscape` This escapes regular expression operators in strings.
  */
@@ -708,8 +719,8 @@ E.copyLine = (line = E.currentLineNumber()) =>
 
 /** Get the name of the current file, editor, as a string.
  *
- * Returns the path to the (file displayed by the) currently active editor (window pane). 
- * 
+ * Returns the path to the (file displayed by the) currently active editor (window pane).
+ *
  * For example, within my `~/init.js` pressing `cmd+e` on the following:
  * ```
  * E.currentFileName() //  ⇒  /Users/musa/init.js
@@ -744,7 +755,7 @@ E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
  *
  * // See your Git credentials: Name, email, editor, etc.
  * E.shell("git config --list").then(x => (E.insert(x.stdout)))
- * 
+ *
  * // Generate a new UUID and save it to your clipboard; returns a string
  * let uuid = (await E.shell(`uuidgen | tr '[:upper:]' '[:lower:]' | pbcopy; pbpaste`)).stdout.trim(); E.message(uuid)
  * ```
@@ -783,12 +794,28 @@ E.terminal = (cmd, title = cmd) => {
 
 /** Make a new webpanel with the given `title` string, that renders the given `html` string.
  *
- * #### Example Use
+ * ### Example Use
  * ```
  * E.shell("fortune").then(x => E.newWebPanel('Fortune!', `<marquee>${x.stdout}</marquee>`))
  * ```
  *
  * See docs: https://code.visualstudio.com/api/extension-guides/webview
+ *
+ * ### Alternatives
+ *
+ * If you only need a container for readonly textual information, consider using `output channel`.
+ *
+ * E.g., the following creates add a new menu item to the `Output` tab in the bottom-most panel
+ * within VSCode. Then we show that channel of output, and add some text to it.
+ *
+ * ```
+ * // An output channel is a container for readonly textual information.
+ * let c = vscode.window.createOutputChannel('Why, Hello There!')
+ * c.show()
+ * c.append("Hiya")
+ * ```
+ *
+ * Essentially this gives a "logging mechanism" to users.
  */
 E.newWebPanel = (title, html) => {
   vscode.window.createWebviewPanel(null, title).webview.html = html
@@ -923,6 +950,10 @@ E.toggle = {
  * // Using a relative path
  * E.findFile('~/init.js')
  * ```
+ *
+ * ### Implementation Notes
+ * Note that there is `vscode.workspace.findFiles` which finds all files matching a given pattern
+ * *only* within the current workspace.
  */
 E.findFile = (path, otherwise = _ => E.shell(`touch ${path}`)) =>
   vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME))).catch(otherwise)
@@ -992,25 +1023,115 @@ function activate(context) {
       //  let result = eval(`(async () => ${text} )()`)
       // let result = eval(`${text}`)
 
-      let result
+      /** Intentionally enforce that our extension is lexically scoped (more or, has no local scopes).
+       *
+       * ### Lexical Scope Example
+       * Select the following block, then press `Cmd+E`.
+       * ```
+       *   {
+       *  // If any caller has a local ‘work`, they’re in for a nasty bug
+       * // from me! Moreover, they better have ‘a` defined in scope!
+       * // Warning: This function changes `work` and accesses `a`.
+       * function woah() { let work = a * 111 }
+       *
+       * // Just adding one to input, innocently calling library method ‘woah`.
+       * function addOne(x) { let work = x + 1; let a = 6; woah(); return work }
+       *
+       * addOne(2) // You expect 3, but instead get 666
+       * }
+       * ```
+       *
+       * That is, Easy-Extensibility is dynamically scoped: The caller’s stack is accessible by default!
+       *
+       * ### Destrucring also works
+       * ```
+       * "hello let and const and var" // The local scope qualifiers are tocuched only when followed by a '='.
+       *
+       * let obj = {x: 1, y : 2}; let {x, y} = obj; x + y // => 3
+       *
+       * let a = 19
+       * let { x } = { x: 23, a }; let { z } = { z: x + 1 }
+       * let [p, q, ...r] = [11, 22, 33, 44, 55]
+       * // Following is now TRUE.
+       * [a, x, z, p, q, r].join(' ') === [19, 23, 24, 11, 22, [33, 44, 55]].join(' ')
+       * ```
+       *
+       * ### Implementation Notes
+       *
+       * [🚀] If we use `eval("x = 1")` then `x` becomes a global variable;
+       * whereas `eval("var x = 1")` creates a locally scoped variable.
+       * Likewise, `[x, y] = [1, 2]` yields globals; but `{x, y} = {x: 1, y: 2}`
+       * does not, on my machine.
+       * */
+      // Also, rewrite any local descurting
+      // let text = "let {x} = {x: 2}; f(); let {y} = {y: 33}; g()" // Example shape.
+      let lets = text.match(/(const|let|var)\s*{([^;]*)} = [^;]*/g)
+      lets?.forEach(local => {
+        // Replace `...let {x, y} = obj...` with `...obj.x; obj.j...`
+        let [_, __, vars, obj] = local.match(/(const|let|var)\s*{(.*)} = (.*)/)
+        vars = vars.replace(/\s/g, '').split(',')
+        text = text.replace(local, vars.map(name => `${name} = (${obj}).${name}`).join(';'))
+      })
+      // 🚀 Any non-desctruring let/const just gets ommited!
+      text = text.replace(/(let|const|var)([^=]*)(=)/g, '$2 = ')
+      // Also make function names into globals:
+      // We replace “function name(” with “name = function name(”.
+      text = text.replace(/function (\w*)\s*\(/g, "$1 = function $1(")
 
-      if (text.startsWith('function') || text.startsWith('async function')) {
-        result = new Function('return ' + text)()
-        commands[result.name] = result
-        E.internal.echoFunction(result.name, 'function')
-        return
-      } else if (text.includes('await ')) result = eval(`(async () => { ${text} })()`)
+      let result
+      if (text.includes('await')) {
+        result = eval(`(async () => {${text}} )().catch(E.error)`)
+        if (!text.includes('E.message'))
+          E.internal.echoFunction("Async operation encountered; consider using “E.message” to see results.")
+      }
       else result = eval(text)
+
+      // * In general, top-level await does not work well with multiple ;-sequenced
+      // * clauses. In doubt, when using top-level await, place seperate statements
+      // * on their own line.
+      // ! let a = 1; let b = await 2;
+      // * The above should have newlines where ";" occurs, otherwise `b` is not defined.
+
+      // When is a given function to be added to the user's custome pallete, cmd+h?
+      // When it has `E` as an argument!
+      //
+      // Functions that depend on `E` are "interactive functions"
+      // and so are part of the user's command pallette, cmd+h; otherwise
+      // they are useful utility functions that the user wishes to have
+      // loaded into the current VSCode session ---but are not intended to be interactively invoked.
+      //
+      // ```
+      // function hi(x) { return x * 2 }
+      // hi(4) // => 8
+      //
+      // function hello(E) { E.message("Hello") }
+      // ```
+      // Cmd+H will now show "hello"
+      //
+      // Note, interactive commands must be functions declared with `function`
+      // or attached explicitly to the `commands` object.
+      // ```
+      // const nope = E => E.message("hi") // This will not be added to the pallete.
+      // ```
+      // This is intended as a hybrid of functions that do work on E, but do
+      // are not intentionally meant to be interactive.
+
+      let functionNames = text.replace(/\s*/g, '')?.match(/function\s*[^\)]*/g)
+        ?.forEach(x => {
+          let args = x?.split("(")[1]?.split(",")
+          let name = x?.match(/function\s*([^\(]*)/)[1]
+          if (args?.includes("E")) commands[name] = eval(name)
+        })
 
       if (currentPrefixArgument) {
         E.insert(`\n${result}`)
         return
       }
 
-      // Don't bother echoing void output.
-      if (text.includes('E.message') || text.includes('E.insert')) return
-
-      E.internal.echoFunction(result)
+      //  TODO Move this check to `E.string`?
+      if (typeof result == 'function')
+        E.internal.echoFunction(result.name, 'function')
+      else E.internal.echoFunction(result)
     })
   )
 
@@ -1021,7 +1142,7 @@ function activate(context) {
       try {
         const result = await vscode.window.showQuickPick(Object.keys(commands), options)
         if (result) {
-          E.message(`Executing ${result}...`)
+          E.message(`Executing “${result}”...`)
           commands[result](E, vscode)
         }
       } finally {
@@ -1033,5 +1154,5 @@ function activate(context) {
 
 module.exports = {
   activate,
-  deactivate: () => {}
+  deactivate: () => { }
 }
