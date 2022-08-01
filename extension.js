@@ -218,6 +218,11 @@ E.string = x => (typeof x === 'string' ? x : JSON.stringify(x))
  * Optionally, `buttons` is an array of strings that are used as buttons; the result of the `E.message` is a thennable
  * that refers to the user's button click, if any.
  *
+ * For a smooth transition to `Easy-Extensibility`, the `Cmd+E` keybinding
+ * makes `console.log(...args)` output a string via `E.message`.
+ * Likewise, `console.error` and `console.warn` are output via `E.error` and
+ * `E.warning`.
+ *
  * #### Examples
  * ```
  * // Common usage
@@ -305,7 +310,7 @@ E.internal.decorateRegexp = { styles: {} }
  *
  * ### Useful Resources
  * - https://eloquentjavascript.net/09_regexp.html#:~:text=A%20number%20of%20common%20character%20groups
- * - The VSCode "Text Regexp" extension, to try out your regexps as you write them!
+ * - The VSCode `Text Regexp` extension, to try out your regexps as you write them!
  * - The function `E.rxEscape` for forming regexps from string literals.
  *
  * ### Arguments
@@ -1077,6 +1082,17 @@ function activate(context) {
       // Also make function names into globals:
       // We replace “function name(” with “name = function name(”.
       text = text.replace(/function (\w*)\s*\(/g, "$1 = function $1(")
+
+      // Anaphoric! We expose this object so that the `eval(text)` below will have it in-scope.
+      let console = {
+        ...global.console,
+        ...{
+          log: (...args) => E.message(args.join(' ')),
+          error: (...args) => E.error(args.join(' ')),
+          warn: (...args) => E.warning(args.join(' ')),
+          assert: (b, msg = '') => b ? 'Assertion Passed' : E.error(`Assertion failed. ${msg}`)
+        }
+      }
 
       let result
       if (text.includes('await')) {
