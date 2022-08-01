@@ -1056,7 +1056,6 @@ function activate(context) {
     }
   })
 
-
   context.subscriptions.push(
     vscode.commands.registerCommand('easy-extensibility.evaluateSelection', async currentPrefixArgument => {
       // To evaluate the current selection, we need an active editor.
@@ -1135,6 +1134,13 @@ function activate(context) {
           warn: (...args) => E.warning(args.join(' ')),
           assert: (b, msg = '') => b ? 'Assertion Passed' : E.error(`Assertion failed. ${msg}`)
         }
+      }
+      // Anaphoric!
+      global.require = require
+      let NODE_PATH = (await E.shell('npm root -g')).stdout.trim()
+      let require = (pkg, explicitPath = 'index.js') => {
+        let attempt = path => { try { return global.require(`${NODE_PATH}/${pkg}/${path}`) } catch (e) { return } }
+        return attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
       }
 
       let result
