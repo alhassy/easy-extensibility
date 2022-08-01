@@ -2,7 +2,7 @@
   "name": "easy-extensibility",
   "displayName": "easy-extensibility",
   "description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
-  "version": "1.2.2",
+  "version": "1.2.2.1",
   "repository": "https://github.com/alhassy/easy-extensibility",
   "icon": "graphics/logo.png",
   "publisher": "alhassy",
@@ -83,6 +83,10 @@
     "@vscode/test-electron": "^2.1.3"
   },
   "dependencies": {
-    "json5": "^2.2.1"
+    "concat-stream": "^2.0.0",
+    "hjson": "^3.2.2",
+    "json5": "^2.2.1",
+    "ramda": "^0.28.0",
+    "require-from-url": "^3.1.3"
   }
 }
