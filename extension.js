@@ -1135,11 +1135,9 @@ function activate(context) {
           assert: (b, msg = '') => b ? 'Assertion Passed' : E.error(`Assertion failed. ${msg}`)
         }
       }
-      // Anaphoric!
-      global.require = require
       let NODE_PATH = (await E.shell('npm root -g')).stdout.trim()
-      let require = (pkg, explicitPath = 'index.js') => {
-        let attempt = path => { try { return global.require(`${NODE_PATH}/${pkg}/${path}`) } catch (e) { return } }
+      E.require = (pkg, explicitPath = 'index.js') => {
+        let attempt = path => { try { return require(`${NODE_PATH}/${pkg}/${path}`) } catch (e) { return } }
         return attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
       }
 
