@@ -1,5 +1,5 @@
 {
-  "name": "easy-extensibility",
+  "name": "vscodejs",
   "version": "1.0.0",
   "description": "Editor crafting utilities; i.e., functions that alter the behaviour of VSCode.",
   "main": "index.js",
