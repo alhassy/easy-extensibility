@@ -1,0 +1,24 @@
+{
+  "name": "easy-extensibility",
+  "version": "1.0.0",
+  "description": "Editor crafting utilities; i.e., functions that alter the behaviour of VSCode.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alhassy/easy-extensibility/lib/"
+  },
+  "keywords": [
+    "editor-crafting",
+    "vscode",
+    "extensibility",
+    "key-bindings",
+    "settings",
+    "snippets",
+    "meta-extension"
+  ],
+  "author": "Musa Al-hassy",
+  "license": "GPL-3.0-or-later"
+}
