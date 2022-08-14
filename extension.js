@@ -11,7 +11,7 @@
  * - To learn about “saving reusable functions and having them load automatically”, invoke `cmd+h find users init.js file, or provide a template`.
  */
 
-/* Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
+/* [Personal Note] Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
 
 let file = require('fs').readFileSync('/Users/musa/easy-extensibility/extension.js').toString()
 let pattern = /\*\*([\S\s]*?)\*\/\sE\.([^=]*)=((.*)=>)?(.*)/g
@@ -66,11 +66,11 @@ const vscode = require('vscode')
  * 3. Attach a function to the `commands` object **as well** as a keybinding:
  *    ```
  *    // Now "Alt+Space W" will echo some forunte/wisdom to you in the bottom-left corner of your VSCode.
- *    commands['Give me some wisdom!'] = { "alt+space w": async E => E.message((await E.shell("fortune")).stdout) }
+ *    commands['Give me some wisdom!'] = { "alt+space w": E => E.message(E.shell("fortune")) }
  *
  *    // Now "Cmd+i d" and "Cmd+i t" will insert the current date and time, respectively.
- *    commands["Insert date"] = { "cmd+i d": async E => E.insert((await E.shell("date +%Y-%m-%d")).stdout) }
- *    commands["Insert time"] = { "cmd+i t": async E => E.insert((await E.shell("date +%H:%M:%S")).stdout) }
+ *    commands["Insert date"] = { "cmd+i d": E => E.insert(E.shell("date +%Y-%m-%d")) }
+ *    commands["Insert time"] = { "cmd+i t": E => E.insert(E.shell("date +%H:%M:%S")) }
  *    ```
  *
  *    Of-course these commands are also accessible via the user pallete `cmd+h`.
@@ -82,20 +82,6 @@ const vscode = require('vscode')
  */
 let commands = {}
 
-/** A high-level VSCode Extension API ---that is also user-friendly.
- *
- * The default `vscode` API is too low-level. Users are forced to worry about windows
- * and editor objects for the sake of inserting some text or retriving selected regions of text.
- *
- * Many methods attached to this API require an active editor. It's up to the user to ensure this
- * requirement is meet; e.g., in a function bound to `commands`, one should perform the a check along the lines of:
- * ```
- * let editor = vscode.window.activeTextEditor;
- * if (!editor) return; // No editor on which to operate, so exit.
- * ... // Otherwise, use `E.XYZ` methods here.
- * ```
- * This pattern is captured in `E.withEditor`.
- */
 const E = require('vscodejs')(vscode)
 
 // init.js ================================================================================
@@ -139,7 +125,7 @@ function activate(context) {
    */
   commands = new Proxy(commands, {
     set(obj, prop, value) {
-      if (typeof value === "object") {
+      if (typeof value === 'object') {
         let keys = Object.keys(value)
         if (keys.length > 1) {
           E.error(`Only 1 key-value pair allowed as value for “commands["${prop}"]”!`)
@@ -148,17 +134,23 @@ function activate(context) {
         let key = keys[0]
         let fun = value[key]
 
-        try { context.subscriptions.push(vscode.commands.registerCommand(prop, () => obj[prop](E))) } catch (e) { }
+        try {
+          context.subscriptions.push(vscode.commands.registerCommand(prop, () => obj[prop](E)))
+        } catch (e) { }
         E.bindKey(key, prop)
 
         obj[prop] = fun
-      }
-      else Reflect.set(...arguments)
+      } else Reflect.set(...arguments)
     }
   })
 
-  context.subscriptions.push(vscode.commands.registerCommand('easy-extensibility.evaluateSelection', E.internal.evaluateSelection))
-  context.subscriptions.push(vscode.commands.registerCommand('easy-extensibility.executeRegisteredCommand', E.internal.executeRegisteredCommand))
+  // Let's expose some `E.internal` functions as commands (`cmd+shift+p`)-visibile by this extension.
+  let register = name =>
+    context.subscriptions.push(
+      vscode.commands.registerCommand(`easy-extensibility.${name}`, E.internal[name](commands))
+    )
+  register('evaluateSelection')
+  register('executeRegisteredCommand')
 }
 
 module.exports = {
