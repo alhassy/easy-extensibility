@@ -82,7 +82,7 @@ const vscode = require('vscode')
  */
 let commands = {}
 
-const E = require('vscodejs')(vscode)
+var E = require('vscodejs')(vscode)
 
 // init.js ================================================================================
 
@@ -100,9 +100,9 @@ commands["Find user's ~/init.js file, or provide a template"] = E =>
     )
   )
 
-//* After `E` has been sufficiently defined, we load the user's `~/init.js` file.
-//* The current implementation treats the user's init file as if it were lexically-scoped:
-//* The `~/init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
+//* After “E” has been sufficiently defined, we load the user's “~/init.js” file.
+//* The current implementation treats the user's init file as if it were semi-dynamically-scoped:
+//* The “~/init.js” file may mention “E, commands, vscode” with no ceremonial import of any kind!
 //* (This is similar to the use of the keyword `this` in object-oriented programming: It's an implicitly introduced argument!)
 
 commands['Reload ~/init.js file'] = E => {

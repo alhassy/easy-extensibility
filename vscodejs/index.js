@@ -23,7 +23,7 @@
 
 // VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
 
-module.exports = (vscode) => {
+module.exports = vscode => {
   const E = {}
 
   // Prefix Arguments ================================================================================
@@ -76,7 +76,7 @@ module.exports = (vscode) => {
    * - The default is to show a `E.message` of a given value `x` along with its type.
    * - Other useful functions include `E.overlay` or `E.insert`.
    */
-  E.internal.echoFunction = (x, typ = typeof x) => E.message(`${JSON.stringify(x)} ~ ${typ}`)
+  E.internal.echoFunction = (x, typ = typeof x) => E.message(`${E.string(x)} ~ ${typ}`)
 
   // set ================================================================================
 
@@ -106,11 +106,21 @@ module.exports = (vscode) => {
    * https://www.roboleary.net/2021/11/06/vscode-you-dont-need-that-extension2.html
    */
   E.set = (key, value) => {
-    let settings = JSON.parse(require("fs").readFileSync(E.internal.set.path))
+    let settings = JSON.parse(require('fs').readFileSync(E.internal.set.path))
     settings[key] = value
-    require("fs").writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2))
+    require('fs').writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2))
     return { key, value }
   }
+
+  /** The converse of `E.set`. This gets values from the user's `settings.json` file.
+   *
+   * ### Example Usage
+   * ```
+   * // If you want the entire (current workspace) config, invoke without any args:
+   * const usersEntireConfig = E.get()
+   * ```
+   */
+  E.get = vscode.workspace.getConfiguration
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
   E.internal.set = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
@@ -140,16 +150,19 @@ module.exports = (vscode) => {
    *    E.bindKey("cmd+shift+k", undefined)
    *    ```
    */
-  E.bindKey = (key, command, when = "editorTextFocus") => {
+  E.bindKey = (key, command, when = 'editorTextFocus') => {
     // ? Note: We likely want to parse using `hjson` instead!
     // Remove starting comment
-    let keys = require("fs").readFileSync(E.internal.bindKey.path).toString().replace("// Place your key bindings in this file to override the defaults", "")
+    let keys = require('fs')
+      .readFileSync(E.internal.bindKey.path)
+      .toString()
+      .replace('// Place your key bindings in this file to override the defaults', '')
     keys = JSON.parse(keys)
     // Override any existing binding for the given key.
     keys = keys.filter(binding => binding.key !== key)
     keys.push({ key, command, when })
-    require("fs").writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
-    return ({ key, command, when })
+    require('fs').writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
+    return { key, command, when }
   }
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
@@ -157,8 +170,29 @@ module.exports = (vscode) => {
 
   // String, Message, Error ================================================================================
 
-  /** Ensure input `x` is a string; if it's not, then stringify it. */
-  E.string = x => (typeof x === 'string' ? x : JSON.stringify(x))
+  /** Ensure input `x` is a string; if it's not, then stringify it.
+   *
+   * ### Examples
+   * ```
+   * var eg = {x: 1, y: 4, 'name is long': () => console.log("musa")}
+   * JSON.stringify(eg) // omits the function, and adds lots of quotes.
+   * E.string(eg) // Shows the function and not any quotes
+   *
+   * var f = () => 1
+   * console.log(f) // => '[Function: f]' ---this is in a NodeJS repl
+   * E.string(f) // => '() => 1'; ie the definition of `f`
+   * ```
+   */
+  E.string = x => {
+    if (typeof x === 'string') return x
+    if (typeof x === 'function') return x.toString()
+    if (Array.isArray(x)) return JSON.stringify(x)
+    if (typeof x === 'object')
+      return `{${Object.keys(x)
+        .map(k => k + ': ' + x[k])
+        .join('; ')}}`
+    return `${x}`
+  }
 
   /** Show JavaScript item `obj` in a VSCode information notification; `obj` is ensured to be a `E.string`.
    *
@@ -250,7 +284,7 @@ module.exports = (vscode) => {
   /** Collection of style types defined by `E.decorateRegexp`.
    *
    * Internal meta-data required to make E.decorateRegexp work; i.e., to make determinstic.
-  */
+   */
   E.internal.decorateRegexp = { styles: {} }
 
   /** Apply `style` to every instance of `regexp` in the currently active editor.
@@ -690,37 +724,37 @@ module.exports = (vscode) => {
   E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
 
   /** Run a shell command and provide its result as a string; or crash when there's an error.
- * This is intentionally synchronous; i.e., everything stops until the command is done executing.
- *
- * @param {string} command - A Unix bash incantation to be executed.
- * @param {boolean} ignore - Whether to actually avoid doing any execution; useful for testing/experimentation.
- * @returns {string} The textual stdout result of executing the given command.
- *
- * - We may want to switch to ShellJS after this script stablises.
- * - Why ShellJS? https://julialang.org/blog/2012/03/shelling-out-sucks/
- * - See also `Executing shell commands from Node.js`, https://2ality.com/2022/07/nodejs-child-process.html
- *
- * ### Examples
- * ```
- * // Who is the current user?
- * console.log( E.shell('whoami') )
- *
- * // Make me smile!
- * console.log( E.shell('fortune') )
- *
- * // See your Git credentials: Name, email, editor, etc.
- * E.shell("git config --list")
- *
- * // Crashes if the provided command does not exist
- * E.shell(`nonexistentprogram`); console.log(`You wont see this msg!`) // Boom!
- *
- * // Pass non-fasly second argument to invoke as a dry-run only
- * E.shell(`nonexistentprogram`, true); console.log(`You WILL see this msg!`)
- * ```
- *
+   * This is intentionally synchronous; i.e., everything stops until the command is done executing.
+   *
+   * @param {string} command - A Unix bash incantation to be executed.
+   * @param {boolean} ignore - Whether to actually avoid doing any execution; useful for testing/experimentation.
+   * @returns {string} The textual stdout result of executing the given command.
+   *
+   * - We may want to switch to ShellJS after this script stablises.
+   * - Why ShellJS? https://julialang.org/blog/2012/03/shelling-out-sucks/
+   * - See also `Executing shell commands from Node.js`, https://2ality.com/2022/07/nodejs-child-process.html
+   *
+   * ### Examples
+   * ```
+   * // Who is the current user?
+   * console.log( E.shell('whoami') )
+   *
+   * // Make me smile!
+   * console.log( E.shell('fortune') )
+   *
+   * // See your Git credentials: Name, email, editor, etc.
+   * E.shell("git config --list")
+   *
+   * // Crashes if the provided command does not exist
+   * E.shell(`nonexistentprogram`); console.log(`You wont see this msg!`) // Boom!
+   *
+   * // Pass non-fasly second argument to invoke as a dry-run only
+   * E.shell(`nonexistentprogram`, true); console.log(`You WILL see this msg!`)
+   * ```
+   *
    * ### See Also
    * `E.asyncShell` runs shell commands asynchronously.
- */
+   */
   E.shell = (command, ignore) => {
     if (!ignore) return require('child_process').execSync(command).toString()?.trim()
 
@@ -958,7 +992,13 @@ module.exports = (vscode) => {
   // ================================================================================
 
   E.require = (pkg, explicitPath = 'index.js') => {
-    let attempt = path => { try { return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`) } catch (e) { return } }
+    let attempt = path => {
+      try {
+        return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`)
+      } catch (e) {
+        return
+      }
+    }
     return attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
   }
 
@@ -980,186 +1020,87 @@ module.exports = (vscode) => {
     }
   }
 
-  E.internal.eval = {
-    /** Intentionally enforce that our extension is dynamically scoped (more or, has no local scopes).
-     * This means that "free variables" (i.e., those not bound as arguments to a function) have their values
-     * looked up at runtime.
-     *
-     * Disable this feature by setting `E.internal.eval.dynamic = false` in your `init.js`.
-     * Or see docstring of `E.internal.eval.elaborate` for more fine-grained control.
-     *
-     * ### Dynamic Scope Example
-     * Select the following block, then press `Cmd+E`.
-     * ```
-     *   {
-     *  // If any caller has a local ‘work`, they’re in for a nasty bug
-     * // from me! Moreover, they better have ‘a` defined in scope!
-     * // Warning: This function changes `work` and accesses `a`.
-     * function woah() { let work = a * 111 }
-     *
-     * // Just adding one to input, innocently calling library method ‘woah`.
-     * function addOne(x) { let work = x + 1; let a = 6; woah(); return work }
-     *
-     * addOne(2) // You expect 3, but instead get 666
-     * }
-     * ```
-     *
-     * That is, Easy-Extensibility is dynamically scoped: The caller’s stack is accessible by default!
-     *
-     * Note `function woah(work) { work = a * 111 }` results in `addOne(2)` giving us 3, since
-     * function arguments have their values looked up at function calls and are disposed of when then function call is done.
-     *
-     * ### Destructuring also works
-     * ```
-     * "hello let and const and var" // The local scope qualifiers are tocuched only when followed by a '='.
-     *
-     * let obj = {x: 1, y : 2}; let {x, y} = obj; x + y // => 3
-     *
-     * let a = 19
-     * let { x } = { x: 23, a }; let { z } = { z: x + 1 }
-     * let [p, q, ...r] = [11, 22, 33, 44, 55]
-     * // Following is now TRUE.
-     * [a, x, z, p, q, r].join(' ') === [19, 23, 24, 11, 22, [33, 44, 55]].join(' ')
-     * ```
-     *
-     * ### Implementation Notes
-     *
-     * If we use `eval("x = 1")` then `x` becomes a global variable;
-     * whereas `eval("var x = 1")` creates a locally scoped variable.
-     */
-    dynamic: true,
-
-    /** How should user's selected text be rewritten before it gets evaluated as JS?
-     *
-     * ## Alterations
-     * 1. `let|const|var {l1, l2, ..., lN} = RHS` --> `let uuid = RHS; l1 = uuid.l1; ...; lN = uuid.lN`
-     * 2. `let|const|var [l0, l1, ..., lN, ...rest] = RHS` --> `let uuid = RHS; l0 = uuid[0]; ...; lN = uuid[N]; rest = uuid.slice(N)`
-     * 3. `let|const|var LHS = RHS` --> `LHS = RHS`
-     * 4. `function f(args) {body}` --> `const f = function f(args) {body}`
-     * 5. We try to avoid doing the above rewrites involving `let, const, var, function` if they appear in \`templates\`.
-     * 6. Inline comments are discarded.
-     *
-     * // * The way the rules are set, it's best to use `backtick` quotes with this extension!
-     * ? Maybe when this extension loads, we show a notification of some FAQs?
-     * ? E.g., dynamic scope and how to disable it; dynamic implies strings are with backticks; and that's all folks?
-     * ? Make this into a message box with a button that disables lexical, or OK to continue.
-     *
-     * ## Disabling this feature
-     * - You can safely turn it off with `E.internal.eval.dynamic = false`,
-     * - Or alter it arbitrarly; e.g., `E.internal.eval.elaborate = text => '23'` makes `cmd+e` always spit out `23`.
-     *
-     * ## Assertions / Examples
-     * ```
-     * const ignoreUUIDs = str => str.replace(/E.internal[^\]]*\]/g, 'uuid')
-     * let expect = (inp, outp) => console.assert( ignoreUUIDs(E.internal.eval.elaborate(inp).trim().replace(/( +)/g, ' ')) === outp)
-     * expect(`let x = 1`, `x = 1`)
-     * ! expect(`let lets = []`, `s = []`) // FIXME!!! OH NO!
-     * let it = `lets?.map(x => x)`; expect(it, it)
-     * let it = `lets || (1 === 1)`; expect(it, it)
-     * expect
-     *
-     * // Array destrucruing rewrites
-     * expect(`let [x, y] = [1, 2]`, `uuid = [1, 2]; x = uuid[0]; y = uuid[1]`)
-     * expect(`let [x, y, ...z] = [2, 4, 6, 8, 10]`, `uuid = [2, 4, 6, 8, 10]; x = uuid[0]; y = uuid[1]; z = uuid.slice(2)`)
-     *
-     * // Object destrucruing rewrites
-     * expect(`let { x, y } = { x: 4, y: 55 }`, `uuid = { x: 4, y: 55 }; x = uuid.x; y = uuid.y`)
-     *
-     * let run = inp => ignoreUUIDs(E.internal.eval.elaborate(inp).trim().replace(/( +)/g, ' '))
-     *
-     * expect("function f(x) { return x + 1}", "f = function f(x) { return x + 1}")
-     * expect(`let x = "echo 'hi'; echo 'world'"`, `x = "echo 'hi'; echo 'world'"`)
-     * expect(`let x = 1; let y = 2`, `x = 1; y = 2`)
-     * expect("let phrase = `let x = 1`", "phrase = `let x = 1`")
-     *
-     * ! Fixme! [Low priority!]
-     * // Not altered since in `strings`
-     * let input = `let phrase = \`let x = 1; function f() {}; // const c = x; var v = f\``
-     * // Actual output: phrase = `1745e253-e28c-4ce5-95d8-62a9cf1eaecd x = 1; function f() {}; // const c = x; var v = f`
-     *```
-     */
-    elaborate(text) {
-      // Get back-tick strings:
-      // (?<![^`])([^ ][^ `]*)(?![^`])
-      // https://regex101.com/
-
-      // ? Hide JS-operators that occur within strings; they should not be replaced!
-      let operators = [';', 'let', 'const', 'var', 'function', '//']
-      let hiddenOps = {}
-      operators.forEach(op => (hiddenOps[op] = require('crypto').randomUUID()))
-      // "`prefix; postfix; appendix` + `more; yet` + `and this` but  def not this".match(/(?<![^`])([^ ][^`]*)(?![^`])/g) // * get all
-      const getStrings = str => str.match(/.(?<![^`])([^ ][^`]*)(?![^`])/g)
-      E.internal.log.append(`\nSTRINGS:  ${JSON.stringify(getStrings(text))}`)
-      let strs = getStrings(text) || []
-      let alters = getStrings(text) || []
-      operators.forEach(op => (alters = alters.map(s => s.replace(op, hiddenOps[op]))))
-      strs.forEach((s, i) => (text = text.replace(s, alters[i])))
-
-      text = text.replace(/\/\/.*/g, '') // kill inline comments, since they might interfer with the elaboration/rewrites below
-
-      let lets = text.match(/(const|let|var)\s*({|\[)([^;]*)(}|]) = [^;\n]*/g)
-
-      E.internal.log.append(`${lets}`)
-
-      // Keep track of RHS expressions; we don't want to evaluate them multiple times!
-      // E.g.,  `let {x, y} = await complexQuery` should evaluate the RHS only once.
-      let identifiers = {} // This names the RHS in the shape `E.internal[someUUID]`
-      let declared = {} // This flags whether the new internal name has been declared already or not. We want one declaration!
-
-      lets?.forEach(local => {
-        // Replace `...let {x, y} = obj...` with `...uuid = obj;  x = obj.x;  y = obj.y...`
-        //      let [_, __, vars, obj] = local.match(/(const|let|var)\s*({|\[)(.*)(}|\]) = (.*)/)
-        let [entireExp, keyword, openBraket, vars, closeBracket, obj] = local.match(
-          /(const|let|var)\s*({|\[)(.*)(}|\]) = (.*)/
-        )
-
-        if (!identifiers[obj]) identifiers[obj] = require('crypto').randomUUID()
-
-        const declare = obj => {
-          if (declared[obj]) return ''
-          declared[obj] = true
-          return `E.internal['${identifiers[obj]}'] = ${obj};`
-        }
-
-        vars = vars.replace(/\s/g, '').split(',')
-        // [Below is fancy version of:] text = text.replace(local, vars.map(name => `${name} = (${obj}).${name}`).join(';'))
-        const rewriteListDestructure = (name, index) => {
-          const restParam = name.includes('...')
-          const suffix = restParam ? `.slice(${index})` : `[${index}]`
-          if (restParam) name = name.replace('...', '')
-          return `${declare(obj)} ${name} = E.internal['${identifiers[obj]}']${suffix}`
-        }
-        text = text.replace(
-          local,
-          vars
-            .map((name, index) =>
-              openBraket == '{'
-                ? `${declare(obj)} ${name} = E.internal['${identifiers[obj]}'].${name}` // RHS is an object
-                : rewriteListDestructure(name, index)
-            )
-            .join(';')
-        )
-      })
-      // 🚀 Any non-desctruring let/const just gets ommited!
-      text = text.replace(/(let|const|var)((\w|\s|,|\[|\])*)(=)/g, '$2 = ')
-
-      // Also make function names into globals:
-      // We replace “function name(” with “name = function name(”.
-      text = text.replace(/function (\w*)\s*\(/g, '$1 = function $1(')
-
-      // ? Surface hidden ops
-      text = text.replace(E.internal.semicolon, ';')
-      operators.forEach(op => (text = text.replace(hiddenOps[op], op)))
-
-      return text
-    }
-  }
-
-  /** How is a selected piece of text to be evaluatedwith `cmd+e`?
+  /** How is a selected piece of text to be evaluated with `cmd+e`?
    *
-   * ### Top-level `await`s
-   * Rather than just `eval(text)`, the following allows users to make use of `await` clauses liberally.
-   * That is, `cmd+e` allows liberal use of `await` clauses as a syntactic sugar for async IIFEs.
+   * ### Output Channel
+   *
+   * For convenience, such as top-level `await`'s, easy-extensibility performs some rewrites on your code before actually
+   * evaluating.
+   *
+   * To see the exact expression that easy-extensibility "sees" when it evaluates your code with CMD+E, open
+   * the `Output` pane in the bottom part of VSCode, then select `easy-extensibility` from the dropdown menu in the
+   * right-most side of the pane.
+   *
+   * This output channel shows you what Easy-Extensibility is evaluating when you press CMD+E;
+   * it also provides hints/comments on when things don't go as you expect!
+   *
+   * (E.g., why your local `let`'s cannot be used globally; or why a side-effectful statement does not show any value notification.)
+   *
+   * ### Example
+   * `CMD+E` is `*`-aware; i.e., you can press `CMD+E` on the lines below and leading *'s are ignored.
+   * ```
+   * // For accessibility, the familiar `console.log/warn/error` are elaborated into VSCode GUI notifications.
+   * console.log("Hello, world!") // => See a nice pop-up appear in the bottom-right porition of the screen
+   *
+   * // Just as `console` is a special object, you now have three new exposed ones:
+   * console.log(E, vscode, commands)
+   *
+   * // [Inserting Evaluation] Press SHIFT CMD+E to have an expression's value inserted.
+   * Object.keys(commands).join('\n')  // => Shows all commands registered in the user's pallete (CMD+H)
+   *
+   * // Objects are echoed in the bottom-left corner nicely, similar to the approach of browsers.
+   * var example = {age: 10 + 2, speak: phrase => `Hello, ${phrase}!` } // CMD+E echoes this nicely
+   *
+   * // The value of the last expression is emitted when CMD+E is invoked.
+   * let obj = {x: 1, y : 2}; let {x, y} = obj; x + y // => 3
+   *
+   * // [Let is Local] A `let` only exists for a single `CMD+E` press; subsequent `CMD+E` presses will not know about your `let`.
+   * let a = 19                    // 1. Press CMD+E on this line; (notice a helpeful warning in the Output Channel.)
+   * let { x } = { x: 23, a }; x  //  2. Press CMD+E on this line; see the error pop-up that `a` is undefined.
+   * // If you select both lines above, then press CMD+E then you'll see the value of `x` ---since `aa` is defined in this single CMD+E press.
+   *
+   * // [Var is Global] A `var` exists throughtout all `CMD+E` presses.
+   * var a = 19                    // 1. Press CMD+E on this line
+   * let { x } = { x: () => "hi", a }; x  //  2. Press CMD+E on this line; see the value of `x`
+   *
+   * // [Locals shadow globals] Press CMD+E on each line; the 3rd line does not alter the global `x` of the 1st line.
+   * // Instead, line 3 creates a local variable named `x`, then does not use it.
+   * var x = 0
+   * console.assert(x === 0)
+   * let x = 1               // (Notice a helpeful warning in the Output Channel.)
+   * console.assert(x === 0)
+   *
+   * // [Locals shadow globals; function example]
+   * var x = 'global'; function f() { let x = 'local' }; f(); console.assert(x === 'global')
+   *
+   * // [Top-Level Awaits] CMD+E allows liberal use of `await` clauses as a syntactic sugar for async IIFEs.
+   *  var { a, b } = await { a: 1, b: 2, c: 3}
+   *  console.assert( a === 1 && b === 2)
+   *
+   * (Note: Technicallly `var`s in any function are LOCAL to that function; so even though the implementation wraps await 's up in
+   * an async IIFE, we also discard all `var` qualifiers so that you get globals just as when you do without awaits; e.g., `var x = 1`.
+   * For the curious, you can actually see this rewrite by openinig the `Output` pane in the bottom part of VSCode.)
+   *
+   * // Of-course, you can still write async IIFE manually and things will work as expected. CMD+E each line:
+   * var a
+   * (async () => { a = await 233 })()
+   * console.assert(a === 233)
+   *
+   * // [Errors are reported nicely]
+   * var h = async () => { return { x: NOPE + 1 } }
+   * await h() // Should see a useful error message!
+   *
+   * // As usual with NodeJS, `var`s in functions remain local to that scope.
+   * function f() { var vv = 1 }
+   * f()
+   * vv // => Error: vv is not defined
+   *
+   * // Example of declaraing an interactive function; more on this below.
+   * function f(E) { E.warning("hiya") }
+   * // Usage-1: Use it in code
+   * f(E)
+   * // Usage-2: Cmd+h f RETURN :-)
+   * ```
    *
    * ### When is a given function to be added to the user's custom pallete, cmd+h?
    * When it has `E` as an argument!
@@ -1184,6 +1125,31 @@ module.exports = (vscode) => {
    * ```
    * This is intended as a hybrid of functions that do work on E, but do
    * are not intentionally meant to be interactive.
+   *
+   * ### Implementation Notes
+   *
+   * If we use `eval("x = 1")` then `x` becomes a global variable;
+   * whereas `eval("var x = 1")` creates a locally scoped variable.
+   *
+   * So we can easily remove all `let, const, var` so all declarations look like `leftSide = rightSide`
+   * and so we only have global variables; but this is terrible, since scope is a useful concept: Otherwise,
+   * you need to ensure all variables everywhere have unique names, unless you intentional want to clobber
+   * existing globals, (regardless you will create new globals)!
+   *
+   * A better approach is to use `(1, eval)`. Indirect evaluation creates globally scoped variables for `var l = r`
+   * and locally scoped variables for `let l = r`. This is a better middle ground.
+   *
+   * Using indirect-eval to evaluate strings as code IN A GLOBAL CONTEXT.
+   * ```
+   * (1, eval)(`var apple = 5; function igo() { return 12 }; let nope = 3; `) // LET & const are local!
+   * apple // => 5
+   * igo() // => 12
+   * nope  // => Error: nope is undefined
+   * ```
+   *
+   * For more on indirect eval, read:
+   * - https://2ality.com/2014/01/eval.html
+   * - https://2ality.com/2012/07/evaluator-via-eval.html
    */
   E.internal.evaluateSelection = commands => currentPrefixArgument => {
     // To evaluate the current selection, we need an active editor.
@@ -1197,35 +1163,88 @@ module.exports = (vscode) => {
     // as such, we ignore all leading '*' on new lines.
     text = text.replace(/(\n|^)\s*\*/g, '$1')
 
-    if (E.internal.eval.dynamic) text = E.internal.eval.elaborate(text)
-
-    // Anaphoric! We expose this object so that the `eval(text)` below will have it in-scope.
-    let console = {
+    // TODO: Find-replace, simplest thing?!  Anaphoric! We expose this object so that the `eval(text)` below will have it in-scope.
+    E.internal.console = {
       ...global.console,
       ...{
-        log: (...args) => E.message(args.join(' ')),
-        error: (...args) => E.error(args.join(' ')),
-        warn: (...args) => E.warning(args.join(' ')),
-        assert: (b, msg = '') => (b ? 'Assertion Passed' : E.error(`Assertion failed. ${msg}`))
+        log: (...args) => E.message(args.map(E.string).join(' ')),
+        error: (...args) => E.error(args.map(E.string).join(' ')),
+        warn: (...args) => E.warning(args.map(E.string).join(' ')),
+        assert: (b, msg = '') => (b ? 'Assertion Passed' : E.error(`Assertion failed.${msg}`))
       }
     }
+    text = text.replace(/console\.log/g, 'E.internal.console.log')
+    text = text.replace(/console\.error/g, 'E.internal.console.error')
+    text = text.replace(/console\.warn/g, 'E.internal.console.warn')
+    text = text.replace(/console\.assert/g, 'E.internal.console.assert')
 
     E.internal.require = { NODE_PATH: E.shell('npm root -g') }
-
     let now = E.shell('date +%H:%M:%S')
-    E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<!!\n`)
-    E.internal.log.append(text)
 
-    /* Useful test case:
-    h = async () => { return { x: NOPE + 1 } }
-    await h() // Should see a useful error message!
-    */
-    let result
+    E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
+
+    // By default `var left = right` performs a side-effect and so evaluates to `undefined`, but it's more useful
+    // for the user to see the value of `left`, so let's save that for future use below ---if any.
+    // This also works for `async function f (args) {body}`.
+    // Note: We do this before any cloberring rewrites.
+    let echoableLeftSide =
+      (text.match(/^(\s*)var([^=]*)=/) || [])[2] || (text.match(/^(\s|async)*function(\s*)(\w*)/) || [])[3]
+
+    if (text.match(/^\s*let/)) {
+      E.internal.log.append(`// “let” clauses declare local variables whose life ends when CMD+E is done;\n`)
+      E.internal.log.append(`// i.e., you wont be able to use this variable in your next CMD+E press.\n`)
+      E.internal.log.append(`// Consider using “var” if you really want a global variable.\n\n`)
+    }
     if (text.includes('await')) {
-      result = eval(`(async () => {${text}})().catch(e => E.error(\`\${e}\`))`)
+      const maybeEcho = !echoableLeftSide ? '' : `.then(_ => E.internal.echoFunction(${echoableLeftSide}))`
+      text = `(async () => {\n\n${text}\n\n})()${maybeEcho}.catch(e => E.error(\`\${e}\`))`
+
       if (!text.includes('E.message'))
-        E.internal.echoFunction('Async operation encountered; consider using “E.message” to see results.')
-    } else result = eval(text)
+        E.internal.log.append('// Async operation encountered; consider using “E.message” to see results.\n')
+
+      let lets = text.match(/(var)\s*({|\[)([^;]*)(}|]) = [^;\n]*/g)
+      // Keep track of RHS expressions; we don't want to evaluate them multiple times!
+      // E.g.,  `var {x, y} = await complexQuery` should evaluate the RHS only once.
+      let identifiers = {} // This names the RHS in the shape `E.internal[someUUID]`
+      let declared = {} // This flags whether the new internal name has been declared already or not. We want one declaration!
+      lets?.forEach(local => {
+        // Replace `...var {x, y} = obj...` with `...uuid = obj;  x = obj.x;  y = obj.y...`
+        let [entireExp, keyword, openBraket, vars, closeBracket, obj] = local.match(/(var)\s*({|\[)(.*)(}|\]) = (.*)/)
+        if (!identifiers[obj]) identifiers[obj] = require('crypto').randomUUID()
+        const declare = obj => {
+          if (declared[obj]) return ''
+          declared[obj] = true
+          return `E.internal['${identifiers[obj]}'] = ${obj}\n`
+        }
+
+        vars = vars.replace(/\s/g, '').split(',')
+        // [Below is fancy version of:] text = text.replace(local, vars.map(name => `${name} = (${obj}).${name}`).join(';'))
+        const rewriteListDestructure = (name, index) => {
+          const restParam = name.includes('...')
+          const suffix = restParam ? `.slice(${index})` : `[${index}]`
+          if (restParam) name = name.replace('...', '')
+          return `${declare(obj)} ${name} = E.internal['${identifiers[obj]}']${suffix}`
+        }
+        text = text.replace(
+          local,
+          vars
+            .map((name, index) =>
+              openBraket == '{'
+                ? `${declare(obj)} ${name} = E.internal['${identifiers[obj]}'].${name}` // RHS is an object
+                : rewriteListDestructure(name, index)
+            )
+            .join('\n')
+        )
+      })
+      // 🚀 Any non-desctruring let/const just gets ommited!
+      text = text.replace(/(var)((\w|\s|,|\[|\])*)(=)/g, '$2 = ')
+    }
+    E.internal.log.append(E.string(text))
+
+    global.E = E
+    global.vscode = vscode
+    global.commands = commands
+    let result = (1, eval)(text)
 
     E.internal.log.append('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
     E.internal.log.append(E.string(result))
@@ -1236,7 +1255,7 @@ module.exports = (vscode) => {
       ?.forEach(x => {
         let args = x?.split('(')[1]?.split(',')
         let name = x?.match(/function\s*([^\(]*)/)[1]
-        if (args?.includes('E')) commands[name] = eval(name)
+        if (args?.includes('E')) commands[name] = (1, eval)(name)
       })
 
     if (currentPrefixArgument) {
@@ -1244,11 +1263,23 @@ module.exports = (vscode) => {
       return
     }
 
-    //  TODO Move this check to `E.string`?
-    if (typeof result == 'function') E.internal.echoFunction(result.name, 'function')
-    else E.internal.echoFunction(result)
-  }
+    E.internal.log.append(echoableLeftSide) // ! remove
 
+    // Text with await tries to do its own echoing above.
+    if (text.includes('await')) return
+
+    // E.g., for a side-effectful operation, like setting a var?
+    // The use of `echoableLeftSide` means if text is `var l = r` then output the value of `l` .
+    // The use of (parens) is for object literals: {x, y} is a block; ({x, y}) is an object literal.
+    if (echoableLeftSide) {
+      E.internal.echoFunction((1, eval)(`(${echoableLeftSide})`))
+      return
+    }
+
+    if (result === undefined || E.string(result) === '{}') return
+
+    E.internal.echoFunction(result)
+  }
 
   // ================================================================================
 
