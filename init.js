@@ -1,3 +1,4 @@
+
 // ==================================================================================
 // ========================= Welcome to your  init.js  file! ========================
 // ==================================================================================
@@ -74,6 +75,22 @@ commands['Make selection into a banner comment'] = E => E.replaceSelectionBy(ban
 // Now run:  cmd+h reload user's init.js file RETURN
 // Then type some text, select it, cmd+h make selection into a banner comment RETURN
 
+//===================================================== Formatted Text =================================================
+
+/** [Formatted] text is not just about speaking *boldly* or _underscoring_ points
+ *  that should be /emphasized/, it can also be about ~fun-and-whimsy~; +lmaof+.
+ * Otherwise, it's all just `work`; e.g.,
+ *   “ This function has arguments being a numeric `age` and a string `name` . ”
+ */
+E.decorateRegexp(/\[.[^ ]*\]/, { border: "dashed", borderRadius: "3px", borderWidth: "2px" }) // [boxed]
+E.decorateRegexp(/\*[^ ]*\*/, { fontWeight: "bold", }) // *Bold*
+E.decorateRegexp(/_[^ ]*_/, { textDecoration: "underline 2px" }) // Look _underline_ text!
+// Comments are italics by default, so /slashes/ make text empahised by being normal font.
+E.decorateRegexp(/\/[^ ]*\//, { fontStyle: "normal", })
+E.decorateRegexp(/\+[^ ]*\+/, { textDecoration: "line-through 2px" }) // +Strikethrough+ text
+E.decorateRegexp(/~[^ ]*~/, { fontStyle: "cursive", textDecoration: "underline wavy 2px" }) // ~wave-to-the-moon~ friends!
+E.decorateRegexp(/`[^ ]*`/, { border: "double", borderRadius: "3px", borderWidth: "2px" }) // `code`
+
 // ==================================================================================
 // ============= Extension: Quickly Jumping to Favorited Webpages/Videos ============
 // ==================================================================================
@@ -91,6 +108,69 @@ commands["Youtube ~ Background audio while I'm working"] = async E => {
     'ASMR ~ Vancouver Cafe': 'https://youtu.be/7sg-dfYLGRQ'
   }
   const url = await E.readInput('What do you want to listen to?', videos)
+  E.browseURL(url)
+}
+
+commands["Learning ~ Stuff I'd like to read"] = async E => {
+  let topics = {
+    'VSCode / Development Workflows': 'https://egghead.io/courses/development-workflows-in-vscode',
+    'Archives / VSCode / Keyboard shortcuts to become a VS Code ninja':
+      'https://blog.logrocket.com/learn-these-keyboard-shortcuts-to-become-a-vs-code-ninja/',
+    'VSCode / Basics ~ Egghead': 'https://egghead.io/courses/vscode-basics',
+    'VSCode / How to debug Playwright tests':
+      'https://medium.com/@anastasiya.mazheika/how-to-debug-playwright-tests-in-vscode-fa0126d9162f',
+    'VSCode / JavaScript Programming': 'https://code.visualstudio.com/docs/languages/javascript#_code-actions-on-save',
+    'VSCode / Refactoring source code in Visual Studio Code': 'https://code.visualstudio.com/docs/editor/refactoring',
+    'VSCode / QA / 5 VSCode Extensions I Use Daily to Manage My Remote Teams | by Ben Newton | Geek Culture | Medium':
+      'https://medium.com/geekculture/5-vscode-extensions-i-use-daily-to-manage-my-remote-teams-21d098c2f702',
+    'VSCode / QA / Jira in vscode': 'https://marketplace.visualstudio.com/items?itemName=Atlassian.atlascode',
+    'VSCode / How to Set Up VS Code Like a Pro in Just 5 Minutes | by Dr. Derek Austin 🥳 | Better Programming':
+      'https://betterprogramming.pub/how-to-set-up-vs-code-like-a-pro-in-just-5-minutes-65aaa5788c0d',
+    'VSCode / Best VSCode Themes: Top 15 Themes For Visual Studio Code | SPEC INDIA':
+      'https://www.spec-india.com/blog/vscode-themes',
+
+    'JS / Async / Asynchronous iteration • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_async-iteration.html',
+    'JS / Async / Asynchronous programming in JavaScript • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_async-js.html',
+    'JS / Async / Async functions • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_async-functions.html',
+    'JS / Async / Promises for asynchronous programming [ES6] • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_promises.html',
+    'JS / JS Visualizer 9000': 'https://www.jsv9000.app/',
+    'JS / Async / Asynchronous programming in JavaScript • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_async-js.html',
+    'JS / Async / Async functions • JavaScript for impatient programmers (ES2022 edition)':
+      'https://exploringjs.com/impatient-js/ch_async-functions.html',
+    'JS / Error handling': 'https://javascript.info/error-handling',
+    'JS / Async / Handling Async Operations in Node.js | by Prachi | JavaScript in Plain English':
+      'https://javascript.plainenglish.io/how-nodejs-works-event-loop-handling-async-operation-4bfc2781110f',
+    'JS / Async / Javascript Async Fundamentals': 'https://www.netguru.com/blog/javascript-async-fundamentals',
+
+    'Algos / RapidAPI Learn': 'https://rapidapi.com/learn',
+    'Algos / Algorithm Visualizer': 'https://algorithm-visualizer.org/',
+
+    'Git / Standup': 'https://dev.to/joeljuca/git-standup-25gm ',
+    'Git / more standup': 'https://levelup.gitconnected.com/how-to-use-git-as-a-standup-tool-8e363013cd9a',
+    'Git / even more git standup': 'https://github.com/kamranahmedse/git-standup',
+    'Git / yet more git standup': 'https://github.com/tj/git-extras/blob/master/Commands.md#git-standup',
+    'Git / Learn Git Branching': 'https://learngitbranching.js.org/',
+
+    'CSS / CSS-Tricks - Tips, Tricks, and Techniques on using Cascading Style Sheets': 'https://css-tricks.com/',
+    'HTML / HTML For Beginners The Easy Way: Start Learning HTML & CSS Today': 'https://html.com/',
+
+    'QA / dev metrics': 'https://waydev.co/software-development-metrics/',
+    'QA / How to prevent code reviews from slowing down your team':
+      'https://www.sheshbabu.com/posts/how-to-prevent-code-reviews-from-slowing-down-your-team/',
+    'QA / Speed up your code reviews using ESLint and Prettier':
+      'https://www.sheshbabu.com/posts/speed-up-your-code-reviews-using-eslint-and-prettier/',
+    'QA / Why Meetings Cost More than MacBook Pros - the Business Case for Fewer Developers in Meetings : r/programming':
+      'https://www.reddit.com/r/programming/comments/ujpxmy/why_meetings_cost_more_than_macbook_pros_the/',
+
+    'Misc / GREX!!! Rewritten in Rust: Modern Alternatives of Command-Line Tools':
+      'https://zaiste.net/posts/shell-commands-rust/'
+  }
+  const url = await E.readInput('What do you want to (re)learn about?', topics)
   E.browseURL(url)
 }
 
@@ -121,11 +201,60 @@ commands['File: Prettify!'] = E => {
 //==================================== Cosmetics ====================================
 //===================================================================================
 
-E.set('workbench.colorTheme', 'Solarized Light') // Use a neato theme
-E.set('workbench.colorTheme', 'Light Pink') // From extension: @id:mgwg.light-pink-theme
-// Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
+// This should just be a thing. Get a random element from an array.
+Array.prototype.random = function () {
+  return this[Math.floor(Math.random() * this.length)]
+}
 
-E.set('semantic-highlighting.isEnable', true) // colors-as-types!
+/** The default theme leaves much to be desired; so upon startup, let's have one of
+ * our favourite themes be chosen.
+ *
+ * - Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
+ * - 'Light Pink' is from extension: @id:mgwg.light-pink-theme
+ */
+let themes = ['Solarized Light', 'Snazzy Operator', 'Light Pink']
+E.set('workbench.colorTheme', themes.random())
+
+/** colors-as-types!
+ *
+ * Coding with a Fruit Salad: Semantic Highlighting
+ *
+ * What should be highlighted when we write code? Static keywords with fixed uses, or dynamic user-defined names?
+ *
+ * “Syntax” highlighting ⇨ Specific words are highlighted in strong colours so that the structure can be easily gleaned.
+ * - Generally this only includes a language's keywords, such as “if, loop, begin, end, cond”.
+ * - User defined names generally share one colour; usually black.
+ * - Hence, an “if” block may be seen as one coloured keyword followed by a blob of black text.
+ * - *Obvious keywords are highlighted while the rest remains in black!*
+ *
+ * “Semantic” highlighting ⇨ Identifiers obtain unique colouring.
+ * - This makes it much easier to visually spot dependencies with a quick glance.
+ * - One can see how data flows through a function.
+ * - In dynamic languages, this is a visual form of typing: Different colours are for different names.
+ * - Especially helpful for (library) names that are almost the same.
+ */
+E.executeCommand('semantic-highlighting.toggleSemanticHighlights') // Extension: Semantic highlighting by malcolmmielle
+
+
+// https://code.visualstudio.com/docs/languages/javascript#_inlay-hints
+E.set('javascript.inlayHints.parameterNames', 'all')
+E.set('javascript.inlayHints.variableTypes.enabled', true)
+
+// Snippets:
+// Quickly create JSDoc comments for functions by typing
+// /** before the function declaration, and select the JSDoc comment snippet suggestion.
+// You can optionally even use the type information from JSDoc comments to type check your JavaScript.
+//
+// Example
+// The following pragma enables typechecking for JS, using JSDocs to get types.
+//@ts-check
+/**
+ *
+ * @param {number} x
+ * @param {number} y
+ */
+function add(x, y) { return x + y }
+add(1, 'nope') // This should now show as an error!
 
 // Add a motavational motto to the VSCode frame window title
 E.set('window.title', '${activeEditorLong} Living The Dream (•̀ᴗ•́)و')
@@ -172,18 +301,33 @@ E.set('editor.snippetSuggestions', 'top')
 //============================= Backup all the things! =============================
 //==================================================================================
 
-// Keep track of local file changes independent of source control.
-//
-// Every time you save an editor, a new entry is added to the list. From an entry you can: compare the changes to the
-// local file or previous entry restore the contents delete or rename the entry
-//
-//
-// Usage :: Cmd+Shift+P Local History: Find Entry to Restore
-//
-// OR: Open a file, then in the Explorer/Cmd+Shift+E, there is the “Timeline” view near the bottom, which has local history for the currently open file.
-E.set('workbench.localHistory.enabled', true) // Controls whether the local file history is enabled.
-E.set('workbench.localHistory.maxFileEntries', 1000) // Controls the maximum number of local file history entries per file. When the number of local file history entries exceeds this number for a file, the oldest entries will be discarded.
-E.set('workbench.localHistory.maxFileSize', 1024) // Controls the maximum size of a file (in KB) to be considered for local history. Files that are larger will not be added to the local history.
+/** Keep track of local file changes independent of source control: Every time you save an editor, a new entry is added
+ * to the list.
+ *
+ *  Let's keep old versions since there's disk space to go around ---what am I going to do with 500gigs when nearly all
+ *  my ‘software’ is textfiles 😼 Whenever ‘I need space,’ then I simply empty the backup directory, if ever.
+ *
+ * Why backups? Sometimes I may forget to submit a file, or edit, to my version control system, and it'd be nice to be
+ * able to see a local automatic backup.
+ *
+ * From an entry you can: compare the changes to the local file or previous entry, restore the contents, delete or
+ * rename the entry. The global commands to work with local history:
+ * - workbench.action.localHistory.create - Create a new history entry for the active file with a custom name.
+ * - workbench.action.localHistory.deleteAll - Delete all history entries across all files.
+ * - workbench.action.localHistory.restoreViaPicker - Find a history entry to restore across all files.
+ * - Or just:  Cmd+Shift+P Local History: Find Entry to Restore
+ * - Or open a file, then in the Explorer, there is the “Timeline” view near the bottom,
+ *   which has local history for the currently open file.
+ *
+ * [Save ≈ Backup] It is intestesting to note that we could easily make our own backup system, had VSCode lacked one, by
+ * having a function simply save copies of our file ---on each save--- where the filename is augmented with a timestamp.
+ */
+E.set('workbench.localHistory.enabled', true)
+// Only keep the last 1000 backups of a file. Silently delete execess backup versions.
+E.set('workbench.localHistory.maxFileEntries', 1000)
+// Controls the maximum size of a file (in KB) to be considered for local history.
+// Files that are larger will not be added to the local history.
+E.set('workbench.localHistory.maxFileSize', 1024)
 
 //==================================================================================
 //=================================== Formatting ===================================
@@ -250,3 +394,102 @@ E.set('editor.copyWithSyntaxHighlighting', true)
 E.set('editor.minimap.enabled', false)
 E.set('files.insertFinalNewline', false)
 E.set('files.trimTrailingWhitespace', true)
+
+
+// Stuff to move over to vscode.js =====================================================================================
+
+/** Create a new editor, setting its language, initial content, and file name. Possibly open an existing file.
+ *
+ * @return A promise that opens a new {@link TextEditor editor}.
+ * @param options A configuration of possible options for thew new file, including:
+ *   - When `content` is `null`, you get the classic VSCode "Select a language, or start typing..." transient placeholder text.
+ *      - If there already exists a file with the given `name`, then we open it and *append* the given content to it.
+ *   - `column` A view column in which the new editor should be shown. Defaulting to 0.
+ *   - `preserveFocus` When `true` the editor will not take focus.
+ *
+ * - If `name` is provided, then an actual file is created ---this is to avoid VSCode's annoying "Save" dialog boxes!
+ *   - If there's already a file named by `name`, then that file is opened instead.
+ *
+ * ### Examples
+ * ```
+ * // Create a new empty editor, with the usual "Select a language, or start typing..." transient placeholder text.
+ * await E.newEditor()
+ *
+ * // Create a new editor showing the results of a shall command, but leave focus in the current editor
+ * await E.newEditor({preserveFocus: true, content: E.shell("ls") })
+ *
+ * // Make a new empty editor, prefixed `Untitled`, whose underlying file is a temporary file.
+ * // * Useful to avoid "Save dialog" when closing resulting editor.
+ * E.newEditor({ name: E.shell(`mktemp -t Untitled`), content: E.shell('ls') })
+ *
+ * // Create a new editor, but set the language and provide some initial text
+ * await E.newEditor({language: "latex", content: String.raw`\large{Hello, world!}`})
+ *
+ * // Create a new editor, and save it to disk ---with no prompt!
+ * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
+ *
+ * // Open existing file (due to above line), and this time append conntent to it!
+ * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
+ * ```
+ */
+E.newEditor = async (options = { language: 'text', content: null, name: null, column: 0, preserveFocus: false }) => {
+  if (options.preserveFocus) { await E.executeCommand('workbench.action.splitEditorRight') }
+  if (options.name) {
+    E.shell(`touch ${options.name}`)
+    await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
+    await E.endOfEditor()
+    E.insert(options.content)
+    if (options.preserveFocus) await E.otherEditor()
+    return
+  }
+  let document = await vscode.workspace.openTextDocument(options)
+  vscode.window.showTextDocument(document, options.column, options.preserveFocus)
+  if (options.preserveFocus) await E.otherEditor()
+}
+
+/** Switch focus to the other/next open editor.
+ *
+ * ### Example Usage
+ * ```
+ * // Split the view, but keep focus here:
+ *  await E.executeCommand('workbench.action.splitEditorRight'); E.otherEditor()
+ * ```
+*/
+E.otherEditor = () => E.executeCommand('workbench.action.navigateEditorGroups')
+
+// TODO: vscode.js should make endOfEditor actually go to the end, not just the final line!
+// ie, go to last line AND last column
+/** Move cursor to the last line of the editor. */
+E.endOfEditor = () => E.executeCommand("cursorBottom")
+
+
+/** Get the next word, from the current curosr position.
+ * This does not get the entire word when the cursor is in the middle of it.
+ *
+ * @returns {string}
+ *
+ * ### Example usage
+ * ```
+ * commands["Echo word"] = { "alt+.": async E => E.message(await E.currentWord()) }
+ * ```
+ * Now press `alt+.` a few times and see what you see.
+ */
+E.currentWord = async () => { await E.executeCommand("cursorWordStartRightSelect"); let word = E.selection(); E.executeCommand('cancelSelection'); return word }
+
+// Define word at point ================================================================================================
+
+/** Show me the definition of a word, in a new pane to the right.
+ * Leave focus in the current pane.
+ */
+commands["Define word"] = {
+  "alt+.": async E => {
+    let word = await E.currentWord()
+    var def = E.shell(`dict ${word}`)
+    let content = `---Overview of “${word.trim()}”; Press Cmd+W to exit---\n\n ${def}`
+    E.newEditor({ name: E.shell(`mktemp -t Dictionary`), content, preserveFocus: true })
+  }
+}
+
+// this essentially removes a lot of the distractions from your view in VS Code.
+// (As always, toggle this with Cmd+Shift+P ---or Ctrl+X+Z)
+E.executeCommand('workbench.action.toggleZenMode')
