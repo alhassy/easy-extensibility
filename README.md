@@ -21,6 +21,16 @@ Extend VSCode without the ceremony of making a full extension! Just write your c
 
 ![Tour of the extension](graphics/welcome.gif)
 
+- [Introductory Youtube Video](https://youtu.be/HO2dFgisriQ)
+- [See many more GIFS/articles here!](https://www.alhassy.com/tag/vscode-tips)
+
+[💐 VSCode is itself a JavaScript REPL 🔁:](https://www.alhassy.com/vscode-is-itself-a-javascript-repl)
+![VSCode is itselfs a JavaScript REPL](graphics/repl.gif)
+
+<!--
+![Beautiful Markdown](graphics/markup.gif)
+  -->
+
 ## Features
 
 

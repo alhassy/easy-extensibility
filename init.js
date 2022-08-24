@@ -1,4 +1,3 @@
-
 // ==================================================================================
 // ========================= Welcome to your  init.js  file! ========================
 // ==================================================================================
@@ -77,19 +76,41 @@ commands['Make selection into a banner comment'] = E => E.replaceSelectionBy(ban
 
 //===================================================== Formatted Text =================================================
 
+/** A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
+ * This includes not only code formatting, but also marked-up comments/design discussions.
+ *
+ * VSCode hovers will render markup such as code `name` or `age`, important _warnings_, and
+ * even more +important+ cruical *points* nicely. But in the comments, there is no such rendering.
+ * Let's fix that!
+ */
+E.decorateRegexp(/\*[^ ]*\*/, { fontWeight: 'bold' }) // *Bold*
+E.decorateRegexp(/_[^ ]*_/, { textDecoration: 'underline 2px' }) // Look _underline_ text!
+// Comments are italics by default, so /slashes/ make text empahised by being normal font.
+E.decorateRegexp(/\/[^ ]*\//, { fontStyle: 'normal' })
+E.decorateRegexp(/\+[^ ]*\+/, { textDecoration: 'line-through 2px' }) // +Strikethrough+ text
+E.decorateRegexp(/`[^ ]*`/, { border: 'double', borderRadius: '3px', borderWidth: '2px' }) // `code`
+
 /** [Formatted] text is not just about speaking *boldly* or _underscoring_ points
  *  that should be /emphasized/, it can also be about ~fun-and-whimsy~; +lmaof+.
- * Otherwise, it's all just `work`; e.g.,
+ *  Otherwise, it's all just `work`; e.g.,
  *   “ This function has arguments being a numeric `age` and a string `name` . ”
  */
-E.decorateRegexp(/\[.[^ ]*\]/, { border: "dashed", borderRadius: "3px", borderWidth: "2px" }) // [boxed]
-E.decorateRegexp(/\*[^ ]*\*/, { fontWeight: "bold", }) // *Bold*
-E.decorateRegexp(/_[^ ]*_/, { textDecoration: "underline 2px" }) // Look _underline_ text!
-// Comments are italics by default, so /slashes/ make text empahised by being normal font.
-E.decorateRegexp(/\/[^ ]*\//, { fontStyle: "normal", })
-E.decorateRegexp(/\+[^ ]*\+/, { textDecoration: "line-through 2px" }) // +Strikethrough+ text
-E.decorateRegexp(/~[^ ]*~/, { fontStyle: "cursive", textDecoration: "underline wavy 2px" }) // ~wave-to-the-moon~ friends!
-E.decorateRegexp(/`[^ ]*`/, { border: "double", borderRadius: "3px", borderWidth: "2px" }) // `code`
+E.decorateRegexp(/~[^ ]*~/, { fontStyle: 'cursive', textDecoration: 'underline wavy 2px' }) // ~wave-to-the-moon~ friends!
+E.decorateRegexp(/\[.[^ ]*\]/, { border: 'dashed', borderRadius: '3px', borderWidth: '2px' }) // [boxed]
+
+// Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline.
+// I like to use this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.
+// I like the "#"-syntax since it's reminiscent of Markdown section markers.
+E.decorateRegexp(/#.*#/, {
+  border: 'solid',
+  borderRadius: '3px',
+  borderWidth: '1px',
+  letterSpacing: '1px',
+  textDecoration: 'underline cyan 2px',
+  color: 'green',
+  fontWeight: 'bold',
+  backgroundColor: 'pink'
+})
 
 // ==================================================================================
 // ============= Extension: Quickly Jumping to Favorited Webpages/Videos ============
@@ -212,7 +233,7 @@ Array.prototype.random = function () {
  * - Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
  * - 'Light Pink' is from extension: @id:mgwg.light-pink-theme
  */
-let themes = ['Solarized Light', 'Snazzy Operator', 'Light Pink']
+let themes = ['Solarized Light', 'Snazzy Operator', 'Light Pink', 'Noctis Lux', 'Noctis Lilac', 'Hopscotch']
 E.set('workbench.colorTheme', themes.random())
 
 /** colors-as-types!
@@ -235,7 +256,6 @@ E.set('workbench.colorTheme', themes.random())
  */
 E.executeCommand('semantic-highlighting.toggleSemanticHighlights') // Extension: Semantic highlighting by malcolmmielle
 
-
 // https://code.visualstudio.com/docs/languages/javascript#_inlay-hints
 E.set('javascript.inlayHints.parameterNames', 'all')
 E.set('javascript.inlayHints.variableTypes.enabled', true)
@@ -253,7 +273,9 @@ E.set('javascript.inlayHints.variableTypes.enabled', true)
  * @param {number} x
  * @param {number} y
  */
-function add(x, y) { return x + y }
+function add(x, y) {
+  return x + y
+}
 add(1, 'nope') // This should now show as an error!
 
 // Add a motavational motto to the VSCode frame window title
@@ -395,7 +417,6 @@ E.set('editor.minimap.enabled', false)
 E.set('files.insertFinalNewline', false)
 E.set('files.trimTrailingWhitespace', true)
 
-
 // Stuff to move over to vscode.js =====================================================================================
 
 /** Create a new editor, setting its language, initial content, and file name. Possibly open an existing file.
@@ -433,7 +454,9 @@ E.set('files.trimTrailingWhitespace', true)
  * ```
  */
 E.newEditor = async (options = { language: 'text', content: null, name: null, column: 0, preserveFocus: false }) => {
-  if (options.preserveFocus) { await E.executeCommand('workbench.action.splitEditorRight') }
+  if (options.preserveFocus) {
+    await E.executeCommand('workbench.action.splitEditorRight')
+  }
   if (options.name) {
     E.shell(`touch ${options.name}`)
     await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
@@ -454,14 +477,13 @@ E.newEditor = async (options = { language: 'text', content: null, name: null, co
  * // Split the view, but keep focus here:
  *  await E.executeCommand('workbench.action.splitEditorRight'); E.otherEditor()
  * ```
-*/
+ */
 E.otherEditor = () => E.executeCommand('workbench.action.navigateEditorGroups')
 
 // TODO: vscode.js should make endOfEditor actually go to the end, not just the final line!
 // ie, go to last line AND last column
 /** Move cursor to the last line of the editor. */
-E.endOfEditor = () => E.executeCommand("cursorBottom")
-
+E.endOfEditor = () => E.executeCommand('cursorBottom')
 
 /** Get the next word, from the current curosr position.
  * This does not get the entire word when the cursor is in the middle of it.
@@ -474,15 +496,20 @@ E.endOfEditor = () => E.executeCommand("cursorBottom")
  * ```
  * Now press `alt+.` a few times and see what you see.
  */
-E.currentWord = async () => { await E.executeCommand("cursorWordStartRightSelect"); let word = E.selection(); E.executeCommand('cancelSelection'); return word }
+E.currentWord = async () => {
+  await E.executeCommand('cursorWordStartRightSelect')
+  let word = E.selection()
+  E.executeCommand('cancelSelection')
+  return word
+}
 
 // Define word at point ================================================================================================
 
 /** Show me the definition of a word, in a new pane to the right.
  * Leave focus in the current pane.
  */
-commands["Define word"] = {
-  "alt+.": async E => {
+commands['Define word'] = {
+  'alt+.': async E => {
     let word = await E.currentWord()
     var def = E.shell(`dict ${word}`)
     let content = `---Overview of “${word.trim()}”; Press Cmd+W to exit---\n\n ${def}`
