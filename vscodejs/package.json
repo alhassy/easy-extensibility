@@ -1,6 +1,6 @@
 {
   "name": "vscodejs",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "Editor crafting utilities; i.e., functions that alter the behaviour of VSCode.",
   "main": "index.js",
   "scripts": {

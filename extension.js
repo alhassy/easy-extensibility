@@ -1,14 +1,14 @@
-/* Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on-the-fly.
+/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on - the - fly.
  *
  * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with `cmd+h`.
  *
  * - There is no edit-load-debug cycle; just edit-then-use!
  * - Then when you're happy with what you have, you form a full extension ---involved default approach 😱!
- * - Or, better yet, save your extensions in an `init.js` file ---new lightweight approach 🤗!
+ * - Or, better yet, save your extensions in an `init.js` file --- new lightweight approach 🤗!
  *
  * # Accessibility
- * - Invoke `cmd+h tutorial` to read the tutorial on using this extension.
- * - To learn about “saving reusable functions and having them load automatically”, invoke `cmd+h find users init.js file, or provide a template`.
+ * - Invoke`cmd+h tutorial` to read the tutorial on using this extension.
+ * - To learn about “saving reusable functions and having them load automatically”, invoke`cmd+h find users init.js file, or provide a template`.
  */
 
 /* [Personal Note] Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
@@ -83,6 +83,21 @@ const vscode = require('vscode')
 let commands = {}
 
 var E = require('vscodejs')(vscode)
+
+// Need this here so that it “inherits” the definition of `require`.
+E.internal.eval.require = (pkg, explicitPath = 'index.js') => {
+  let attempt = path => {
+    try {
+      return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`)
+    } catch (e) {
+      return
+    }
+  }
+  // The first `require` below is for built-in packages, like `fs`.
+  return (
+    require(pkg) || attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
+  )
+}
 
 // init.js ================================================================================
 

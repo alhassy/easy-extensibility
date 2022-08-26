@@ -189,8 +189,8 @@ module.exports = vscode => {
     if (Array.isArray(x)) return JSON.stringify(x)
     if (typeof x === 'object')
       return `{${Object.keys(x)
-        .map(k => k + ': ' + x[k])
-        .join('; ')}}`
+        .map(k => `${k}: ${JSON.stringify(x[k]) || `[${(typeof x[k]).toUpperCase()}]`}`)
+        .join(', ')}}`
     return `${x}`
   }
 
@@ -429,11 +429,21 @@ module.exports = vscode => {
   /** Move cursor to the start of the current line. */
   E.startOfLine = () => E.executeCommand('cursorLineStart')
 
-  /** Move cursor to the last line of the editor. */
-  E.endOfEditor = () => E.nextLine(E.lastLineNumber())
+  /** Move cursor to the last line (and last column) of the editor. */
+  E.endOfEditor = () => E.executeCommand('cursorBottom')
 
   /** Move cursor to the first line of the editor. */
   E.startOfEditor = () => E.nextLine(-E.lastLineNumber())
+
+  /** Switch focus to the other/next open editor.
+   *
+   * ### Example Usage
+   * ```
+   * // Split the view, but keep focus here:
+   *  await E.executeCommand('workbench.action.splitEditorRight'); E.otherEditor()
+   * ```
+   */
+  E.otherEditor = () => E.executeCommand('workbench.action.navigateEditorGroups')
 
   /** Move cursor to the given `line` number and `column` number. */
   E.gotoLine = (line, column) => {
@@ -461,6 +471,75 @@ module.exports = vscode => {
     let position = editor.selection.active
     callback()
     editor.selection = new vscode.Selection(position, position)
+  }
+
+  /** Create a new editor, setting its language, initial content, and file name. Possibly open an existing file.
+   *
+   * @return A promise that opens a new {@link TextEditor editor}.
+   * @param options A configuration of possible options for thew new file, including:
+   *   - When `content` is `null`, you get the classic VSCode "Select a language, or start typing..." transient placeholder text.
+   *      - If there already exists a file with the given `name`, then we open it and *append* the given content to it.
+   *   - `column` A view column in which the new editor should be shown. Defaulting to 0.
+   *   - `preserveFocus` When `true` the editor will not take focus.
+   *
+   * - If `name` is provided, then an actual file is created ---this is to avoid VSCode's annoying "Save" dialog boxes!
+   *   - If there's already a file named by `name`, then that file is opened instead.
+   *
+   * ### Examples
+   * ```
+   * // Create a new empty editor, with the usual "Select a language, or start typing..." transient placeholder text.
+   * await E.newEditor()
+   *
+   * // Create a new editor showing the results of a shall command, but leave focus in the current editor
+   * await E.newEditor({preserveFocus: true, content: E.shell("ls") })
+   *
+   * // Make a new empty editor, prefixed `Untitled`, whose underlying file is a temporary file.
+   * // * Useful to avoid "Save dialog" when closing resulting editor.
+   * E.newEditor({ name: E.shell(`mktemp -t Untitled`), content: E.shell('ls') })
+   *
+   * // Create a new editor, but set the language and provide some initial text
+   * await E.newEditor({language: "latex", content: String.raw`\large{Hello, world!}`})
+   *
+   * // Create a new editor, and save it to disk ---with no prompt!
+   * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
+   *
+   * // Open existing file (due to above line), and this time append conntent to it!
+   * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
+   * ```
+   */
+  E.newEditor = async (options = { language: 'text', content: null, name: null, column: 0, preserveFocus: false }) => {
+    if (options.preserveFocus) {
+      await E.executeCommand('workbench.action.splitEditorRight')
+    }
+    if (options.name) {
+      E.shell(`touch ${options.name}`)
+      await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
+      await E.endOfEditor()
+      E.insert(options.content)
+      if (options.preserveFocus) await E.otherEditor()
+      return
+    }
+    let document = await vscode.workspace.openTextDocument(options)
+    vscode.window.showTextDocument(document, options.column, options.preserveFocus)
+    if (options.preserveFocus) await E.otherEditor()
+  }
+
+  /** Get the next word, from the current curosr position.
+   * This does not get the entire word when the cursor is in the middle of it.
+   *
+   * @returns {string}
+   *
+   * ### Example usage
+   * ```
+   * commands["Echo word"] = { "alt+.": async E => E.message(await E.currentWord()) }
+   * ```
+   * Now press `alt+.` a few times and see what you see.
+   */
+  E.currentWord = async () => {
+    await E.executeCommand('cursorWordStartRightSelect')
+    let word = E.selection()
+    E.executeCommand('cancelSelection')
+    return word
   }
 
   // Inserts & input ================================================================================
@@ -595,6 +674,16 @@ module.exports = vscode => {
   E.selectionOrEntireLine = () => {
     let text = E.selection().trim()
     if (text.length === 0) text = E.currentLine().trim()
+    return text
+  }
+
+  /** Like `E.selectionOrEntireLine` but ensures cursor moves to the end of the line, when no explicit selection is performed. */
+  E.selectionOrEntireLineEOL = async () => {
+    let text = E.selection().trim()
+    if (text.length === 0) {
+      text = E.currentLine().trim()
+      await E.endOfLine() // Move cursor to end of line
+    }
     return text
   }
 
@@ -991,19 +1080,6 @@ module.exports = vscode => {
 
   // ================================================================================
 
-  E.require = (pkg, explicitPath = 'index.js') => {
-    let attempt = path => {
-      try {
-        return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`)
-      } catch (e) {
-        return
-      }
-    }
-    return attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
-  }
-
-  // ================================================================================
-
   E.internal.log = vscode.window.createOutputChannel('easy-extensibility')
 
   E.internal.executeRegisteredCommand = commands => async currentPrefixArgument => {
@@ -1019,6 +1095,29 @@ module.exports = vscode => {
       E.currentPrefixArgument = undefined
     }
   }
+
+  E.internal.eval = { anaphora: text => text }
+
+  E.internal.eval.console = {
+    ...global.console,
+    ...{
+      log: (...args) => E.message(args.map(E.string).join(' ')),
+      error: (...args) => E.error(args.map(E.string).join(' ')),
+      warn: (...args) => E.warning(args.map(E.string).join(' ')),
+      assert: (b, msg = '') => (b ? 'Assertion Passed' : E.error(`Assertion failed.${msg}`))
+    }
+  }
+
+  // Find-replace, simplest thing?!  Anaphoric! We expose some objects so that the `eval(text)` below will have them in-scope.
+  E.internal.eval.anaphora = text => {
+    text = text.replace(/console\.log\(/g, 'E.internal.eval.console.log(')
+    text = text.replace(/console\.error\(/g, 'E.internal.eval.console.error(')
+    text = text.replace(/console\.warn\(/g, 'E.internal.eval.console.warn(')
+    text = text.replace(/console\.assert\(/g, 'E.internal.eval.console.assert(')
+    text = text.replace(/(require\([^\)]*\))/g, "E.internal.eval.$1")
+    return text
+  }
+
 
   /** How is a selected piece of text to be evaluated with `cmd+e`?
    *
@@ -1158,25 +1257,11 @@ module.exports = vscode => {
     if (!editor) return
 
     let text = E.selectionOrEntireLine()
+    text = E.internal.eval.anaphora(text)
 
     // I'd like to be able to select a JS doc example usage and quickly run that;
     // as such, we ignore all leading '*' on new lines.
     text = text.replace(/(\n|^)\s*\*/g, '$1')
-
-    // TODO: Find-replace, simplest thing?!  Anaphoric! We expose this object so that the `eval(text)` below will have it in-scope.
-    E.internal.console = {
-      ...global.console,
-      ...{
-        log: (...args) => E.message(args.map(E.string).join(' ')),
-        error: (...args) => E.error(args.map(E.string).join(' ')),
-        warn: (...args) => E.warning(args.map(E.string).join(' ')),
-        assert: (b, msg = '') => (b ? 'Assertion Passed' : E.error(`Assertion failed.${msg}`))
-      }
-    }
-    text = text.replace(/console\.log/g, 'E.internal.console.log')
-    text = text.replace(/console\.error/g, 'E.internal.console.error')
-    text = text.replace(/console\.warn/g, 'E.internal.console.warn')
-    text = text.replace(/console\.assert/g, 'E.internal.console.assert')
 
     E.internal.require = { NODE_PATH: E.shell('npm root -g') }
     let now = E.shell('date +%H:%M:%S')
