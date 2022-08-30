@@ -35,6 +35,8 @@ require('fs').writeFileSync('/Users/musa/easy-extensibility/E-snippets.json', JS
 // vscode, E, commands ================================================================================
 
 const vscode = require('vscode')
+const conf = vscode.workspace.getConfiguration("easy-extensibility").get
+const rcfile = conf("rcFile")
 
 /** User-defined commands that are invoked by `cmd+h`, or via their declared keybinding.
  *
@@ -108,10 +110,10 @@ commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => 
   E.findFile('~/Downloads/tutorial.js')
 }
 
-commands["Find user's ~/.init.js file, or provide a template"] = E =>
-  E.findFile('~/.init.js', _ =>
+commands["Find user's rc file, or provide a template"] = E =>
+  E.findFile(rcfile, _ =>
     E.shell(
-      'curl -o ~/.init.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js; code ~/.init.js'
+      `curl -o ${rcfile} https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js; code ${rcfile}`
     )
   )
 
@@ -120,17 +122,17 @@ commands["Find user's ~/.init.js file, or provide a template"] = E =>
 //* The “~/.init.js” file may mention “E, commands, vscode” with no ceremonial import of any kind!
 //* (This is similar to the use of the keyword `this` in object-oriented programming: It's an implicitly introduced argument!)
 
-commands['Reload ~/.init.js file'] = E => {
-  E.readFile('~/.init.js').then(text => {
+commands['Reload rc file'] = E => {
+  E.readFile(rcfile).then(text => {
     // Rather than just `eval(text)`, the following allows users to make use of `await` clauses liberally.
     // That is, the user's `~/.init.js` file can make liberal use of `await` clauses as a syntactic sugar for an ambient async IIFE.
     eval(`(async () => { ${text} })()`)
-    E.message('~/.init.js loaded!')
+    E.message(`${rcfile} loaded!`)
   })
 }
 
 //!! Actually load the file upon startup!
-commands['Reload ~/.init.js file'](E)
+commands['Reload rc file'](E)
 
 // ================================================================================
 

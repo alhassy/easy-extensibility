@@ -23,6 +23,21 @@
 			"type": "object",
 			"title": "Easy Extensibility",
 			"properties": {
+			  "easy-extensibility.rcFile": {
+				"type": "string",
+				"default": "~/.init.js",
+				"description": "Specifies the file path containing the main rc file to use."
+			  },
+			  "easy-extensibility.npmCommand": {
+				"type": "string",
+				"default": "npm",
+				"description": "Specifies the npm command from nodejs."
+			  },
+			  "easy-extensibility.dateCommand": {
+				"type": "string",
+				"default": "date",
+				"description": "Specifies the date command."
+			  },
 			  "easy-extensibility.settingsFile": {
 				"type": "string",
 				"default": "~/.config/Code/User/settings.json",

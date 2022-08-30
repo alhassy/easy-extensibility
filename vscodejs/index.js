@@ -24,6 +24,7 @@
 // VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
 
 module.exports = vscode => {
+  const conf = vscode.workspace.getConfiguration("easy-extensibility").get
   const E = {}
 
   // Prefix Arguments ================================================================================
@@ -123,7 +124,7 @@ module.exports = vscode => {
   E.get = vscode.workspace.getConfiguration
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.set = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
+  E.internal.set = { path: conf("settingsFile") }
 
   // bindKey ================================================================================
 
@@ -166,7 +167,7 @@ module.exports = vscode => {
   }
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.bindKey = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json` }
+  E.internal.bindKey = { path: conf("keybindingsFile") }
 
   // String, Message, Error ================================================================================
 
@@ -1263,8 +1264,8 @@ module.exports = vscode => {
     // as such, we ignore all leading '*' on new lines.
     text = text.replace(/(\n|^)\s*\*/g, '$1')
 
-    E.internal.require = { NODE_PATH: E.shell('npm root -g') }
-    let now = E.shell('date +%H:%M:%S')
+    E.internal.require = { NODE_PATH: E.shell(conf("npmCommand") + " root -g") }
+    let now = E.shell(conf("dateCommand"))
 
     E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
 
