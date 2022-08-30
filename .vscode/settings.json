@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "PKGBUILD": "shellscript",
+        "*.install": "shell-script",
+        "*.desktop": "ini",
+        "*.hta": "html",
+        "*.yas": "yassnippet",
+        "*.ttml": "xml",
+        "*.ttss": "css"
+    }
+}

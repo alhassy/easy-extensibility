@@ -1,90 +1,112 @@
 {
-  "name": "easy-extensibility",
-  "displayName": "easy-extensibility",
-  "description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
-  "version": "1.2.9",
-  "repository": "https://github.com/alhassy/easy-extensibility",
-  "icon": "graphics/logo.png",
-  "publisher": "alhassy",
-  "engines": {
-    "vscode": "^1.68.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished",
-    "onCommand:easy-extensibility.evaluateSelection",
-    "onCommand:easy-extensibility.executeRegisteredCommand"
-  ],
-  "main": "./extension.js",
-  "contributes": {
-    "snippets": [
-      {
-        "language": "javascript",
-        "path": "./E-snippets.json"
-      }
-    ],
-    "commands": [
-      {
-        "command": "easy-extensibility.evaluateSelection",
-        "title": "Evaluate Selected Region"
-      },
-      {
-        "command": "easy-extensibility.executeRegisteredCommand",
-        "title": "Execute Registered Command"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "easy-extensibility.evaluateSelection",
-        "mac": "cmd+e",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "easy-extensibility.evaluateSelection",
-        "mac": "shift+cmd+e",
-        "when": "editorTextFocus",
-        "args": 1
-      },
-      {
-        "command": "easy-extensibility.executeRegisteredCommand",
-        "mac": "cmd+h"
-      },
-      {
-        "command": "easy-extensibility.executeRegisteredCommand",
-        "mac": "shift+cmd+h",
-        "args": 1
-      },
-      {
-        "command": "easy-extensibility.executeRegisteredCommand",
-        "mac": "shift+5 cmd+h",
-        "args": 5
-      }
-    ]
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "test": "node ./test/runTest.js"
-  },
-  "devDependencies": {
-    "@types/glob": "^7.2.0",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "^16.11.47",
-    "@types/vscode": "^1.68.0",
-    "@vscode/test-electron": "^2.1.3",
-    "eslint": "^8.21.0",
-    "glob": "^8.0.3",
-    "mocha": "^10.0.0",
-    "typescript": "^4.7.2"
-  },
-  "dependencies": {
-    "concat-stream": "^2.0.0",
-    "hjson": "^3.2.2",
-    "json5": "^2.2.1",
-    "ramda": "^0.28.0",
-    "require-from-url": "^3.1.3",
-    "vscodejs": "^1.2.3"
-  }
+	"name": "easy-extensibility",
+	"displayName": "easy-extensibility",
+	"description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
+	"version": "1.2.9",
+	"repository": "https://github.com/alhassy/easy-extensibility",
+	"icon": "graphics/logo.png",
+	"publisher": "alhassy",
+	"engines": {
+		"vscode": "^1.68.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished",
+		"onCommand:easy-extensibility.evaluateSelection",
+		"onCommand:easy-extensibility.executeRegisteredCommand"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"configuration" : {
+			"type": "object",
+			"title": "Easy Extensibility",
+			"properties": {
+			  "easy-extensibility.settingsFile": {
+				"type": "string",
+				"default": "~/.config/Code/User/settings.json",
+				"description": "Specifies the folder path containing the settings.json file to use."
+			  },
+			  "easy-extensibility.keybindingsFile": {
+				"type": "string",
+				"default": "~/.config/Code/User/keybindings.json",
+				"description": "Specifies the folder path containing the keybindings.json file to use."
+			  }
+			}
+		},
+		"snippets": [
+			{
+				"language": "javascript",
+				"path": "./E-snippets.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "easy-extensibility.evaluateSelection",
+				"title": "Evaluate Selected Region"
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"title": "Execute Registered Command"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "easy-extensibility.evaluateSelection",
+				"mac": "cmd+e",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "easy-extensibility.evaluateSelection",
+				"mac": "shift+cmd+e",
+				"when": "editorTextFocus",
+				"args": 1
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"mac": "cmd+h"
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"mac": "shift+cmd+h",
+				"args": 1
+			},
+			{
+				"command": "easy-extensibility.executeRegisteredCommand",
+				"mac": "shift+5 cmd+h",
+				"args": 5
+			}
+		]
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.1",
+		"@types/node": "^16.11.47",
+		"@types/vscode": "^1.68.0",
+		"@vscode/test-electron": "^2.1.3",
+		"eslint": "^8.21.0",
+		"glob": "^8.0.3",
+		"mocha": "^10.0.0",
+		"typescript": "^4.7.2"
+	},
+	"dependencies": {
+		"concat-stream": "^2.0.0",
+		"hjson": "^3.2.2",
+		"json5": "^2.2.1",
+		"ramda": "^0.28.0",
+		"require-from-url": "^3.1.3",
+		"vscodejs": "^1.2.3"
+	},
+	"__metadata": {
+		"id": "aa86014f-9133-49b7-b981-36c44d1328a7",
+		"publisherDisplayName": "Musa Al-hassy",
+		"publisherId": "2d11d29f-7371-4436-8544-10d8f2124f1e",
+		"isPreReleaseVersion": false
+	}
 }

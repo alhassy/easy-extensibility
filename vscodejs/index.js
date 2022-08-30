@@ -796,7 +796,7 @@ module.exports = vscode => {
    *
    * Returns the path to the (file displayed by the) currently active editor (window pane).
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentFileName() //  ⇒  /Users/musa/init.js
    * ```
@@ -805,7 +805,7 @@ module.exports = vscode => {
 
   /** Get the name of the directory that contains the current file, editor, as a string.
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentDirectory() //  ⇒  /Users/musa/
    * ```
@@ -1051,7 +1051,7 @@ module.exports = vscode => {
    * E.findFile('Users/musa/init.js')
    *
    * // Using a relative path
-   * E.findFile('~/init.js')
+   * E.findFile('~/.init.js')
    * ```
    *
    * ### Implementation Notes
@@ -1068,10 +1068,10 @@ module.exports = vscode => {
    * E.readFile('Users/musa/init.js').then(x => E.message(x))
    *
    * // Using a relative path
-   * E.readFile('~/init.js').then(E.message)
+   * E.readFile('~/.init.js').then(E.message)
    *
    * // Evaluating file contents; dangerous. Useful for dynamically-scoped programming.
-   * E.readFile('~/init.js').then(eval)
+   * E.readFile('~/.init.js').then(eval)
    * ```
    */
   E.readFile = path => ({

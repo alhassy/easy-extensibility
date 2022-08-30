@@ -11,7 +11,7 @@
 // If you haven't already, invoke `cmd+h tutorial` to read the tutorial first!
 
 // The current implementation treats the user's init file as if it were semi-dynamically-scoped:
-// The `~/init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
+// The `~/.init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
 // (This is similar to the use of the keyword `this` in object-oriented programming:
 //  It's an implicitly introduced argument!)
 
@@ -19,7 +19,7 @@
 // (More honestly, this is Musa's personal init.js being shared with the world.)
 
 // It is encouraged to keep this file under version control, then make a symbolic link;
-// e.g.,   ln  -s  ~/my-cool-repo/init.js  ~/init.js
+// e.g.,   ln  -s  ~/my-cool-repo/init.js  ~/.init.js
 
 // ==================================================================================
 // ========= 🚀 Whenever we open VSCode, let's see a motivating message! 💪 ==========
