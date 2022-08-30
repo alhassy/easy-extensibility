@@ -168,6 +168,11 @@ function activate(context) {
     )
   register('evaluateSelection')
   register('executeRegisteredCommand')
+
+  let initialization = () => {
+    E.node_path = E.shell(conf("npmCommand") + " root -g")
+  }
+  initialization()
 }
 
 module.exports = {

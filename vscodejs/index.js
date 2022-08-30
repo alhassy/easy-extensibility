@@ -1273,7 +1273,7 @@ module.exports = vscode => {
     // as such, we ignore all leading '*' on new lines.
     text = text.replace(/(\n|^)\s*\*/g, '$1')
 
-    E.internal.require = { NODE_PATH: E.shell(conf("npmCommand") + " root -g") }
+    E.internal.require = { NODE_PATH: E.node_path }
     let now = E.date()
 
     E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
