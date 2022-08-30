@@ -75,6 +75,8 @@
 			{
 				"command": "easy-extensibility.evaluateSelection",
 				"mac": "cmd+e",
+				"linux": "ctrl+c e",
+				"win": "ctrl+c e",
 				"when": "editorTextFocus"
 			},
 			{
@@ -85,7 +87,9 @@
 			},
 			{
 				"command": "easy-extensibility.executeRegisteredCommand",
-				"mac": "cmd+h"
+				"mac": "cmd+h",
+				"linux": "ctrl+c g",
+				"win": "ctrl+c g"
 			},
 			{
 				"command": "easy-extensibility.executeRegisteredCommand",
