@@ -105,29 +105,31 @@ E.internal.eval.require = (pkg, explicitPath = 'index.js') => {
 
 commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => {
   E.shell(
-    'rm ~/Downloads/tutorial.js; curl -o ~/Downloads/tutorial.js https://raw.githubusercontent.com/alhassy/easy-extensibility/main/tutorial.js'
+    `rm ${E.expanduser("~/Downloads/tutorial.js")}; curl -o ${E.expanduser("~/Downloads/tutorial.js")} https://raw.githubusercontent.com/alhassy/easy-extensibility/main/tutorial.js`
   )
-  E.findFile('~/Downloads/tutorial.js')
+  E.findFile(E.expanduser('~/Downloads/tutorial.js'))
 }
 
-commands["Find user's rc file, or provide a template"] = E =>
-  E.findFile(rcfile, _ =>
+commands["Find user's rc file, or provide a template"] = E => {
+  let rc = E.expanduser(rcfile)
+  E.findFile(rc, _ =>
     E.shell(
-      `curl -o ${rcfile} https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js; code ${rcfile}`
+      `curl -o ${rc} https://raw.githubusercontent.com/alhassy/easy-extensibility/main/init.js; code ${rc}`
     )
   )
-
+}
 //* After “E” has been sufficiently defined, we load the user's “~/.init.js” file.
 //* The current implementation treats the user's init file as if it were semi-dynamically-scoped:
 //* The “~/.init.js” file may mention “E, commands, vscode” with no ceremonial import of any kind!
 //* (This is similar to the use of the keyword `this` in object-oriented programming: It's an implicitly introduced argument!)
 
 commands['Reload rc file'] = E => {
-  E.readFile(rcfile).then(text => {
+  let rc = E.expanduser(rcfile)
+  E.readFile(rc).then(text => {
     // Rather than just `eval(text)`, the following allows users to make use of `await` clauses liberally.
     // That is, the user's `~/.init.js` file can make liberal use of `await` clauses as a syntactic sugar for an ambient async IIFE.
     eval(`(async () => { ${text} })()`)
-    E.message(`${rcfile} loaded!`)
+    E.message(`${rc} loaded!`)
   })
 }
 

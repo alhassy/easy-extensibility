@@ -20,12 +20,14 @@
  * ```
  * This pattern is captured by `E.withEditor`.
  */
+const path = require("path")
 
 // VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
-
 module.exports = vscode => {
   const conf = vscode.workspace.getConfiguration("easy-extensibility").get
   const isWin = process.platform === "win32"
+  const userDir = isWin ? path.normalize(path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) : process.env.HOME
+
   const E = {}
 
   // Prefix Arguments ================================================================================
@@ -821,6 +823,17 @@ module.exports = vscode => {
    * ```
    */
   E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
+
+  /** Expand user directory
+   *  expand "~" to actual path.
+   */
+  E.expanduser = ( pathstr ) => {
+    if( pathstr.indexOf("~") === 0) {
+      return path.normalize(path.join(userDir, pathstr.slice(2)))
+    } else {
+      return pathstr
+    }
+  }
 
   /** Run a shell command and provide its result as a string; or crash when there's an error.
    * This is intentionally synchronous; i.e., everything stops until the command is done executing.
