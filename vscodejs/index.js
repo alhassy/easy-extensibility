@@ -25,6 +25,7 @@
 
 module.exports = vscode => {
   const conf = vscode.workspace.getConfiguration("easy-extensibility").get
+  const isWin = process.platform === "win32"
   const E = {}
 
   // Prefix Arguments ================================================================================
@@ -126,6 +127,14 @@ module.exports = vscode => {
   /** The path used by `E.set` to find the user's `settings.json` file. */
   E.internal.set = { path: conf("settingsFile") }
 
+  /** Os dependent function */
+  if(isWin) {
+    E.date = () => { return E.shell(conf("dateCommand.windows")) }
+    E.username = () => { return process.env.USERNAME }
+  } else {
+    E.date = () => { return E.shell(conf("dateCommand.unix")) }
+    E.username = () => { return process.env.USER }
+  }
   // bindKey ================================================================================
 
   /** Bind `key` sequence to the given `command` name (only `when` predicate is true).
@@ -1265,7 +1274,7 @@ module.exports = vscode => {
     text = text.replace(/(\n|^)\s*\*/g, '$1')
 
     E.internal.require = { NODE_PATH: E.shell(conf("npmCommand") + " root -g") }
-    let now = E.shell(conf("dateCommand"))
+    let now = E.date()
 
     E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
 

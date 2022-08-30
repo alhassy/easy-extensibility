@@ -33,10 +33,15 @@
 				"default": "npm",
 				"description": "Specifies the npm command from nodejs."
 			  },
-			  "easy-extensibility.dateCommand": {
+			  "easy-extensibility.dateCommand.unix": {
 				"type": "string",
-				"default": "date",
-				"description": "Specifies the date command."
+				"default": "date +%H:%M:%S",
+				"description": "Specifies the date command on unix like platform."
+			  },
+			  "easy-extensibility.dateCommand.windows": {
+				"type": "string",
+				"default": "date /T",
+				"description": "Specifies the date command on windows platform."
 			  },
 			  "easy-extensibility.settingsFile": {
 				"type": "string",

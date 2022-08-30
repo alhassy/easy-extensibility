@@ -24,7 +24,7 @@
 // ==================================================================================
 // ========= 🚀 Whenever we open VSCode, let's see a motivating message! 💪 ==========
 // ==================================================================================
-let welcome = `Welcome ${process.env.USER}! Today is ${E.shell('date')}!`
+let welcome = `Welcome ${E.username()} on ${process.platform}! Today is ${E.date()}!`
 let button = `A beautiful day to be alive 😃💐😁`
 E.message(welcome, button)
 
