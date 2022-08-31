@@ -21,11 +21,22 @@
  * This pattern is captured by `E.withEditor`.
  */
 const path = require("path")
+function getConfigDir() {
+  switch(process.platform) {
+      case "win32":
+          return path.join(process.env.APPDATA, "Code", "User")
+      case "linux":
+          return path.join(process.env.HOME, ".config", "Code", "User")
+      case "osx":
+          return path.join(process.env.HOME, "Library", "Application Support", "Code", "User")
+  }
+}
 
 // VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
 module.exports = vscode => {
   const conf = vscode.workspace.getConfiguration("easy-extensibility").get
   const isWin = process.platform === "win32"
+  const configdir = getConfigDir()
   const userDir = isWin ? path.normalize(path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) : process.env.HOME
 
   const E = {}
@@ -127,7 +138,7 @@ module.exports = vscode => {
   E.get = vscode.workspace.getConfiguration
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.set = { path: conf("settingsFile") }
+  E.internal.set = { path: path.join(configdir, "settings.json") }
 
   /** Os dependent function */
   if(isWin) {
@@ -178,7 +189,7 @@ module.exports = vscode => {
   }
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.bindKey = { path: conf("keybindingsFile") }
+  E.internal.bindKey = { path: path.join(configdir, "keybindings.json") }
 
   // String, Message, Error ================================================================================
 

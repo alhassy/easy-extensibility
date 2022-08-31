@@ -42,16 +42,6 @@
 				"type": "string",
 				"default": "date /T",
 				"description": "Specifies the date command on windows platform."
-			  },
-			  "easy-extensibility.settingsFile": {
-				"type": "string",
-				"default": "~/.config/Code/User/settings.json",
-				"description": "Specifies the folder path containing the settings.json file to use."
-			  },
-			  "easy-extensibility.keybindingsFile": {
-				"type": "string",
-				"default": "~/.config/Code/User/keybindings.json",
-				"description": "Specifies the folder path containing the keybindings.json file to use."
 			  }
 			}
 		},
