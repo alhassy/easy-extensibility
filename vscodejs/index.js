@@ -525,7 +525,7 @@ module.exports = vscode => {
     }
     if (options.name) {
       E.shell(`touch ${options.name}`)
-      await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
+      await vscode.window.showTextDocument(vscode.Uri.file(E.expanduser(options.name)))
       await E.endOfEditor()
       E.insert(options.content)
       if (options.preserveFocus) await E.otherEditor()
@@ -1082,7 +1082,7 @@ module.exports = vscode => {
    * *only* within the current workspace.
    */
   E.findFile = (path, otherwise = _ => E.shell(`touch ${path}`)) =>
-    vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME))).catch(otherwise)
+    vscode.window.showTextDocument(vscode.Uri.file(E.expanduser(path))).catch(otherwise)
 
   /** Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.
    * #### Examples
@@ -1098,7 +1098,7 @@ module.exports = vscode => {
    * ```
    */
   E.readFile = path => ({
-    then: f => require('fs').readFile(path.replace(/~/g, process.env.HOME), 'utf8', (err, data) => f(data))
+    then: f => require('fs').readFile(E.expanduser(path), 'utf8', (err, data) => f(data))
   })
 
   // ================================================================================

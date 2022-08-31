@@ -520,3 +520,17 @@ commands['Define word'] = {
 // this essentially removes a lot of the distractions from your view in VS Code.
 // (As always, toggle this with Cmd+Shift+P ---or Ctrl+X+Z)
 E.executeCommand('workbench.action.toggleZenMode')
+
+function quoteSelection(quote = "\"", sep = " ") {
+  let editor = vscode.window.activeTextEditor
+  const document = editor.document
+  const selection = editor.selection
+  const replacement = document.getText(selection).split(" ").map(str => quote+str+quote).join(sep)
+  editor.edit(editBuilder => editBuilder.replace(selection, replacement))
+}
+
+commands["Quote selection"] = E => quoteSelection()
+
+commands["Quote selection with \" and separate with \",\""] = E => quoteSelection("\"", ", ")
+
+commands["Quote selection with ' and separate with \",\""] = E => quoteSelection("'", ", ")
