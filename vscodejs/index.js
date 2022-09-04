@@ -1368,5 +1368,267 @@ module.exports = vscode => {
 
   // ================================================================================
 
+  /** Make VSCode into a REPL for a given language: Essentially make something like `Cmd+E` but for your language of
+   * choice.
+   *
+   * Suppose you're exploring a Python/Ruby/Java/JS/TS/Haskell/Lisps/etc API, or experimenting with an idea and want
+   * immediate feedback. You could open a terminal and try things out there; with no editor support, and occassionaly
+   * copy-pasting things back into your editor for future use. Better yet, why not use your editor itself as a REPL.
+   *
+   * Implementation & behavioural notes can be found in the Python Example below.
+   *
+   * We show how to use this powerful setup for a number of languages: Many of them are one-liners! So cool 😄
+   * - For brevity, for REPLS that don't use stderr, we wont go out of our way to make error messages look nice.
+   * - However, this is not hard to do, so our final example, for Java, will have most of the `config` object filled!
+   *
+   * ### Python Example ---and Description of `config`
+   * ```
+   * commands['Evaluate: Python'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'python3 -i' }) }
+   * ```
+   * That's it! Press `Cmd+E` on the above line so that `Ctrl+X Ctrl+E` will now evaluate a selection, or the entire
+   * line, as if it were Python code. For instance, copy-paste the following examples into a Python file ---or just
+   * remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```python
+   * 1 + 2             # ⮕ 3
+   * hello = 'world!'  #      (No output; this is an effectful operation)
+   * print(hello)      # ⮕ world!
+   * 2 + 'hi'          # 🚫 TypeError: unsupported operand type(s) for +: 'int' and 'str'
+   * ```
+   *
+   * All of these results are echoed inline in an overlay, by default.  Moreover, there is an Output Channel created for
+   * your REPL so you can see everything you've sent to it, and the output it sent back. This is particularly useful for
+   * lengthy error messages, such as those of Java, which cannot be inline nicely in a hover.
+   *
+   * How this works is that VSCodeJS spawns a new python3 process, then `Ctrl+X Ctrl+E` sends text to that process.
+   * Whenever the process emits any output ---on stdout or stderr--- then we emit that to the user via an overlay
+   * starting with `⮕` for stdout and `🚫`.
+   *
+   * The configuration argument object has the following keys ---with only `command` being mandatory.
+   * - command : string. What is the CLI command to start your repl; you may need an `-i` flag to force it to be
+   *   interactive even though we use it from a child process rather than a top-level shell.
+   * - prompt : string. What is the prompt that your REPL shows, e.g., `>`. We try to ignore showing it in an overlay
+   *   that would otherwise hide useful output.
+   * - echo : string -> void. How should results be echoed to the user. By default this is `E.overlay` with an `⮕`
+   *   arrow; another alternative would be `E.message` for notification dialogs which support lengthy text.
+   * - stdout : string->string?.  Logic to perform on the stdout string result before echoing it to the user. If it
+   *   returns null, then no echo is performed. By default this is the identity function.
+   * - stderr : string -> string?.  Logic to perform on the stderr string result before echoing it to the user. If it
+   *   returns null, then no echo is performed.
+   * - errorMarkers : RegExp[]. Sadly many REPLs do not emit to stderr, but instead only use stdout. In that case, we
+   *   would need to examine the output of stdout to determine if it's an error or not. We do so via a list of regular
+   *   expressions that are used to match against error messages.
+   *   - If errorMarkers is provided, then its zeroth item is used for stderr ---if no stderr function is provided.
+   * - alterInput: string -> string.
+   *
+   * These configurations will be made clearer with more examples!
+   *
+   * ## Ruby Example
+   * ```
+   * commands['Evaluate: Ruby'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'irb' }) }
+   * ```
+   * That's it! Press `Cmd+E` on the above line so that `Ctrl+X Ctrl+E` will now evaluate a selection, or the entire
+   * line, as if it were Ruby code. For instance, copy-paste the following examples into a Ruby file ---or just remove
+   * the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```ruby
+   * 5.times { print "Odelay! " }                                  # ⮕ Odelay! Odelay! Odelay! Odelay! Odelay! 5
+   * ['ruby', 'is', 'readable'].map { | food | food.capitalize }   # ⮕ ["Ruby", "Is", "Readable"]
+   * nope                                       # ⮕ NameError (undefined local variable or method `nope' for main:Object)
+   * ```
+   * Notice that the final line is an error, but still resulted in a `⮕ ` instead of a `🚫`.  If we really want the
+   * latter annotation, we need to provide a `errorMarkers` argument; keep reading to see how!
+   *
+   * ## Clojure Example
+   * ```
+   * // brew install clojure/tools/clojure
+   * commands['Evaluate: Clojure'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'clj', prompt: 'user=>' }) }
+   * ```
+   * That's it! Press `Cmd+E` on the above line so that `Ctrl+X Ctrl+E` will now evaluate a selection, or the entire
+   * line, as if it were Clojure code. For instance, copy-paste the following examples into a Clojure file ---or just
+   * remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```clojure
+   * (+ 1 2)                    ;; ⮕ 3
+   * (defn square [x] (* x x))  ;; ⮕ #'user/square
+   * (square 3)                 ;; ⮕ 9
+   * ```
+   *
+   *## Common Lisp Example
+   *```
+   * // brew install sbcl
+   * commands['Evaluate: Lisp'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'sbcl' }) }
+   * ```
+   * That's it! Press `Cmd+E` on the above line so that `Ctrl+X Ctrl+E` will now evaluate a selection, or the entire
+   * line, as if it were Common Lisp code. For instance, copy-paste the following examples into a Common Lisp file ---or
+   * just remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```lisp
+   * ;; Select the following function, then Ctrl+X Ctrl+E, to see:  ⮕ RANGE
+   * (defun range (max &key (min 0) (step 1))
+   *    (loop for n from min below max by step collect n))
+   *
+   * (setq  odds-under-10 (range 10 :min 1 :step 2)) ;; ⮕ (1 3 5 7 9)
+   *
+   * (loop for x in odds-under-10 sum x)             ;; ⮕ 25
+   * ```
+   *
+   * ## JavaScript Example
+   * This REPL is not really needed, since `Cmd+E` already does a good job of being a JS REPL within VSCode!  However,
+   * it's useful when you want to write some JS without accidently relying on the `E` API.
+   *
+   * ```
+   * commands['Evaluate: JavaScript'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'node -i', prompt: '>' })}
+   * ```
+   * That's it! Press `Cmd+E` on the above line so that `Ctrl+X Ctrl+E` will now evaluate a selection, or the entire
+   * line, as if it were JavaScript code. For instance, copy-paste the following examples into a JavaScript file ---or
+   * just remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```
+   * 1 + 2                                     // ⮕ 3
+   * 1 + '2'                                   // ⮕ '12'
+   * let me = {name: 'Jasim'}; Object.keys(me) // ⮕ ['name']
+   * me.doesNotExist('whoops')                 // ⮕ Uncaught TypeError: me.doesNotExist is not a function
+   * ```
+   *
+   * ## TypeScript Example
+   * ```
+   * commands['Evaluate: TypeScript'] = {
+   *  'ctrl+x ctrl+e': E.REPL({
+   *    command: 'ts-node -i',
+   *    prompt: '>',
+   *    stdout: result => result.trim() === ">" ? null : result,  // ! This should be built-into E.REPL ??
+   *    errorMarkers: ['error[^:]*:(.*)']
+   * })}
+   * ```
+   *
+   * With this, we can now press `Cmd+E` on the above snippet so that `Ctrl+X Ctrl+E` will now evaluate a selection, or
+   * the entire line, as if it were TypeScript code. For instance, copy-paste the following examples into a TypeScript
+   * file ---or just remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```ts
+   * 2 + 3   // ⮕  5
+   * 2 - '3' // 🚫 The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type
+   *
+   * let obj = {hi: 1, bye: 2}; obj              // ⮕  {hi: 1, bye: 2}
+   *
+   * let jump = (x: number, y: number) => x + y
+   * jump(1, 2)   // ⮕  3
+   * jump(1, '2') // 🚫 Argument of type 'string' is not assignable to parameter of type 'number'.
+   * ```
+   *
+   * ## Haskell Example
+   * ```
+   * commands['Evaluate: Haskell'] = { 'ctrl+x ctrl+e': E.REPL({ command: 'ghci', prompt: 'Prelude>' }) }
+   * // alterInput: code => `: { \n${ code } \n:} \n`
+   * ```
+   * With this, we can now press `Cmd+E` on the above snippet so that `Ctrl+X Ctrl+E` will now evaluate a selection, or
+   * the entire line, as if it were Haskell code. For instance, copy-paste the following examples into a Haskell file
+   * ---or just remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```haskell
+   * factorial n = product [1..n]   -- Should omit nothing: A new function has been defined.
+   * factorial 4                    -- Should omit 24.
+   *
+   * -- Select the next two lines, then C-x C-e
+   * fact n | n <= 1 = 1 ; fact n | otherwise = n * fact(n - 1)
+   * -- Anyhow, now this should yield 24
+   * fact 4
+   * ```
+   *
+   * For multi-line support; see the `alterInput` incantation above.
+   * - However, it seems ghci does not play nice when using single lines within `:{...:}` delimiters.
+   *
+   * ## Java Example
+   *
+   * ```
+   * commands['Evaluate: Java'] = {
+   *   'ctrl+x ctrl+e': E.REPL({
+   *     command: '/usr/bin/jshell',
+   *     prompt: 'jshell>',
+   *     errorMarkers: [/Error:/, /\|\s*\^-*-/, /\|\s+Exception/, /\|\s+at/, /cannot find symbol/, /symbol:/],
+   *     echo: E.overlay,
+   *     stdout: result => result.includes(' ==> ') ? result.replace('==>', '⮕') : `⮕ ${result} `})}
+   * ```
+   *
+   * With this, we can now press `Cmd+E` on the above snippet so that `Ctrl+X Ctrl+E` will now evaluate a selection, or
+   * the entire line, as if it were Java code. For instance, copy-paste the following examples into a Java file ---or
+   * just remove the leading `*`--- and press `Ctrl+X Ctrl+E` to evaluate them!
+   *
+   * ```
+   * // Is this JavaScript ??? 😜
+   * var hello = "world!";   // hello ⮕ "world!"
+   *
+   * // Useful error messages
+   * var whoops = nope - 1 / 0; // 🚫 Error: Look at the “Output” pane below 🚫
+   *                            // (This actually opens the output pane for your REPL too!)
+   *
+   * // Let's do some gui goodness: Open a message dialog box 😝
+   * import javax. swing.*;
+   * var f = new JFrame();
+   * f.setAlwaysOnTop(true);
+   * JOptionPane.showMessageDialog(f, "Hello World");
+   * ```
+   */
+  E.REPL = config => {
+
+    let { command, stdout, stderr, prompt, errorMarkers, echo, alterInput } = config
+
+    let [cmd, ...args] = command.split(' ')
+    stdout = stdout || (result => result)
+    // `stderr` intentionally left null when not provided.
+    // `prompt` intentionally left null when not provided.
+    errorMarkers = errorMarkers || []
+    echo = echo || ((obj, prefix = '⮕ ') => E.overlay(`${prefix}${obj} `))
+    alterInput = alterInput || (code => `${code} \n`)
+    let { spawn } = require('child_process')
+    let logger = vscode.window.createOutputChannel(`easy - extensibiliity: ${cmd} `)
+    let repl = spawn(cmd, args)
+
+    repl.stderr.on('data', data => {
+      let err = data.toString()
+      logger.append(err)
+      let msg = stderr ? stderr(err) : (err.match(errorMarkers[0] || '(.*Error.*)')[1])
+      if (msg) echo(msg, '🚫 ')
+    })
+
+    repl.stdout.on('data', data => {
+      let result = data.toString()
+      logger.append(result)
+      result = result.trim()
+
+      if (prompt) {
+        if (result.match(prompt)) return
+        result = result.replace(prompt, '')
+      }
+      if (!result.length) return
+
+      // If this repl has no stdout channel, so let's fake it.
+      if (errorMarkers?.some(err => result.match(err))) {
+        echo(`🚫 Error: Look at the “Output” pane below 🚫`)
+        E.message(`Press “Cmd + J” to close the bottom - most pane.`)
+        logger.show()
+        return
+      }
+
+      let msg = stdout(result, logger)
+      if (msg) echo(msg)
+    })
+
+    // Evaluate a selected expression, otherwise move cursor to end of line and evaluate entire line.
+    // Then show value in an overlay ---after the selection, or end of line.
+    let interactive = async E => {
+      let code = await E.selectionOrEntireLineEOL()
+      code = alterInput(code)
+      logger.append(code)
+      repl.stdin.write(code)
+    }
+
+    return interactive
+  }
+
+
+  // ================================================================================
+
   return E
 }
