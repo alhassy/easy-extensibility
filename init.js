@@ -1,107 +1,114 @@
-// ==================================================================================
-// ========================= Welcome to your  init.js  file! ========================
-// ==================================================================================
+/** Welcome to your  init.js  file!
+ *
+ * Everything in this file, this JS program, is run whenever you open VSCode. (Assuming you have the
+ * `easy - extensibility` package installed of-course!)
+ *
+ * This is useful for adding your own snippets, useful commands, to the `cmd + h` command pallet or for configuring
+ * VSCode depending on the workspace, date, machine, etc.
+ *
+ *
+ * IF YOU HAVEN'T ALREADY, INVOKE `CMD + H TUTORIAL` TO READ THE TUTORIAL FIRST!
+ * - tldr: Cmd+E to evaluate a selection of code; Cmd+H to run commands from the user's personal pallete.
+ *
+ *
+ * The current implementation treats the user's init file as if it were semi-dynamically-scoped: The `~/init.js` file
+ * may mention `E, commands, vscode` with no ceremonial import of any kind!(This is similar to the use of the keyword
+ * `this` in object - oriented programming: It's an implicitly introduced argument!)
+ *
+ * Below are sample fragments to help you get started; all the best!(More honestly, this is Musa's personal init.js
+ * being shared with the world.)
+ *
+ * It is encouraged to keep this file under version control, then make a symbolic link;
+ * e.g., `ln - s ~/my-cool-repo/init.js  ~/init.js`
+ *
+ * # A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
+ * - In VSCode, press “⌘+k ⌘+1” to fold everything up and get a nice outline view of everything here.
+ * /
 
-// Everything in this file, this JS program, is run whenever you open VSCode.
-// (Assuming you have the `easy-extensibility` package installed of-course!)
-//
-// This is useful for adding your own snippets, useful commands, to the `cmd+h` command pallet
-// or for configuring VSCode depending on the workspace, date, machine, etc.
+//===================================================== Simple Starters ================================================
 
-// If you haven't already, invoke `cmd+h tutorial` to read the tutorial first!
-
-// The current implementation treats the user's init file as if it were semi-dynamically-scoped:
-// The `~/init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
-// (This is similar to the use of the keyword `this` in object-oriented programming:
-//  It's an implicitly introduced argument!)
-
-// Below are sample fragments to help you get started; all the best!
-// (More honestly, this is Musa's personal init.js being shared with the world.)
-
-// It is encouraged to keep this file under version control, then make a symbolic link;
-// e.g.,   ln  -s  ~/my-cool-repo/init.js  ~/init.js
-
-// ==================================================================================
-// ========= 🚀 Whenever we open VSCode, let's see a motivating message! 💪 ==========
-// ==================================================================================
+/** 🚀 Whenever we open VSCode, let's see a motivating message! 💪
+ *
+ */
 let welcome = `Welcome ${process.env.USER}! Today is ${E.shell('date')}!`
 let button = `A beautiful day to be alive 😃💐😁`
 E.message(welcome, button)
 
-// Notice that we can use `await` clauses liberally in our init.js file.
-// How does this work? The `easy-extensibility` extension implicitly wraps the
-// entire init.js file in an ambient async IIFE.
+/** “Fancy quotes” & smiles: Let's add a new command to the `cmd+h` command pallet.
+ *
+ * I like using unicode quotes, since `backticks` are not always approriate.
+ */
+commands['Enclose selection in unicode quotes'] = { 'cmd+i q': E => E.replaceSelectionBy(str => `“${str}”`) }
 
-// ========================================  ========================================
-// ============= Let's add a new command to the `cmd+h` command pallet. ============
-// ========================================  ========================================
-
-// Let's add the command that let's me make the above "banner-style comments" 😉
-
-// But first, let's make a super tiny (but, for me, super useful) command to see things in action!
-commands['Enclose selection in unicode quotes'] = {
-  'cmd+i q': E => E.replaceSelectionBy(str => `“${str}”`)
-}
-//
-// Now run:  cmd+h reload user's init.js file RETURN
-// Then type some text, select it, cmd+h enclose selection in unicode quotes RETURN
-
-// Then another tiny command, to get comfortable with this setup.
+/** Bring some joy to my day upon startup. */
 commands['Make me smile!'] = E => E.terminal('fortune | cowsay | lolcat')
-//
-// Now run:  cmd+h reload user's init.js file RETURN cmd+h make me smile RETURN
+commands['Make me smile!'](E)
 
-// Of-course, after I see what makes me smile, I'd like to simple select it and have an image
-// that I can share with my colleagues; e.g., on Slack. On MacOs, just `Command + Shift + 4`.
+/** I'd like to get my “TODO” keywords highlighted, a trailing colon is required; e.g., TODO: FIXME:. */
+E.installExtension('wayou.vscode-todo-highlight') // https://marketplace.visualstudio.com/items?itemName=wayou.vscode-todo-highlight
 
-// Anyhow, finally, let's get to a slightly more JavaScripty command:
-//
-// Example usage:  E.message( bannerComment("hiya, amigo, and friends!") )
-//
-// “Cmd+Shift+h banner” places a box around the selected text;
-// “Cmd+h banner” places a left-right banner beside/around the selected text.
-//
-function bannerComment(str, style = '=') {
-  let repetitions = Math.round((120 - str.length) / 2)
-  let banner = Array(repetitions).fill(style).join('')
-  let comment = [`//` + banner, str, banner].join(' ')
-  let delimiter = comment.replace(/[^\/]/g, style)
-  return !E.currentPrefixArgument ? comment : `${delimiter}\n${comment}\n${delimiter}`
-}
-//
-commands['Make selection into a banner comment'] = E => E.replaceSelectionBy(bannerComment)
+/** `Alt+q`: Pretty text!
+ *
+ * This extension semantically re-wraps comments that exceed the 120 column.
+ * - Press `Alt+q` to do the rewrap editor-wide; or
+ * - Select some text, then `Alt+q`.
+ *
+ * It understands comment markers and other markdown syntax. Then more!
+ *
+ * # Alt+q is configurable
+ *
+ * For example, I'd like whenever a paragraph is wrapped, for any lines that end in ".", "?" or "!", two spaces will be
+ * added after that sentence when the paragraph is rewrapped. Neato! yeah buddo.
+ *
+ * Also, when I press `Alt+q` multiple times, then it wrap text according to each of my rulers. One of my rulers is set
+ * at position 0, and made to (diss)appear transparently, so that wrapping to it provides an “infinite wrap length”.
+ * But, if I want to wrap to a given column length, then I use `Ctrl+Shift+Q`.
+ */
+E.installExtension('stkb.rewrap') // https://marketplace.visualstudio.com/items?itemName=stkb.rewrap
+E.set('rewrap.doubleSentenceSpacing', true) // ? This does not seem to work.
+E.set('rewrap.autoWrap.enabled', true) // Auto-wrap my comment text when I type, the moment I exceed my dedicated ruler.
+E.bindKey('ctrl+shift+q', 'rewrap.rewrapCommentAt') // Prompt me for a column-width to wrap all/selected comment text to;
+// neato when sharing text.
 
-// Now run:  cmd+h reload user's init.js file RETURN
-// Then type some text, select it, cmd+h make selection into a banner comment RETURN
+/** Render vertical rulers after a certain number of monospace characters.
+ *
+ * Use multiple values for multiple rulers. No rulers are drawn if array is empty. */
+E.set('editor.rulers', [
+  120,
+  { column: 0, color: '#0000' } // with alpha-channel 0 = transparent
+])
 
 //===================================================== Formatted Text =================================================
 
-/** A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
- * This includes not only code formatting, but also marked-up comments/design discussions.
+/** A program is a literate work, written by a human & read by a human ---incidentally also by a machine. This includes
+ * not only code formatting, but also marked-up comments/design discussions.
  *
- * VSCode hovers will render markup such as code `name` or `age`, important _warnings_, and
- * even more +important+ cruical *points* nicely. But in the comments, there is no such rendering.
- * Let's fix that!
+ * VSCode hovers will render markup such as code `name` or `age`, important _warnings_, and even more +important+
+ * cruical *points* nicely. But in the comments, there is no such rendering.
+ *
+ * Likewise, I'd like the very first sentence of a JSDoc to act like a “chapter heading”, and likewise for `# whatever`
+ * markdown-style subsection headers.
+ *
+ * Moreover, [formatted] text is not just about speaking *boldly* or _underscoring_ points that should be /emphasized/,
+ * it can also be about ~fun-and-whimsy~; +lmaof+. Otherwise, it's all just `work`; e.g., “ This function has arguments
+ * being a numeric `age` and a string `name` . ”
  */
+E.decorateRegexp(/\*\* .*/, { backgroundColor: 'pink' }) // I want docstring “intro” sentences nicely coloured too!
+E.decorateRegexp(/\*\s+#.*/, { backgroundColor: 'pink' }) // Also colour doc subsection lines.
 E.decorateRegexp(/\*[^ ]*\*/, { fontWeight: 'bold' }) // *Bold*
 E.decorateRegexp(/_[^ ]*_/, { textDecoration: 'underline 2px' }) // Look _underline_ text!
 // Comments are italics by default, so /slashes/ make text empahised by being normal font.
 E.decorateRegexp(/\/[^ ]*\//, { fontStyle: 'normal' })
 E.decorateRegexp(/\+[^ ]*\+/, { textDecoration: 'line-through 2px' }) // +Strikethrough+ text
-E.decorateRegexp(/`[^ ]*`/, { border: 'double', borderRadius: '3px', borderWidth: '2px' }) // `code`
+E.decorateRegexp(/`[^ $]*`/, { border: 'double', borderRadius: '3px', borderWidth: '2px' }, { disable: !true }) // `code`
+E.decorateRegexp(/~[^ \n]*~/, { fontStyle: 'cursive', textDecoration: 'underline wavy 2px' }) // ~wave-to-the-moon~
+E.decorateRegexp(/[^\/]\[.[^ ]*\]/, { border: 'dashed', borderRadius: '3px', borderWidth: '2px' }) // [boxed]
 
-/** [Formatted] text is not just about speaking *boldly* or _underscoring_ points
- *  that should be /emphasized/, it can also be about ~fun-and-whimsy~; +lmaof+.
- *  Otherwise, it's all just `work`; e.g.,
- *   “ This function has arguments being a numeric `age` and a string `name` . ”
+/** Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline. I like to use
+ * this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.  I like the
+ * "#"-syntax since it's reminiscent of Markdown section markers.
  */
-E.decorateRegexp(/~[^ ]*~/, { fontStyle: 'cursive', textDecoration: 'underline wavy 2px' }) // ~wave-to-the-moon~ friends!
-E.decorateRegexp(/\[.[^ ]*\]/, { border: 'dashed', borderRadius: '3px', borderWidth: '2px' }) // [boxed]
-
-// Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline.
-// I like to use this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.
-// I like the "#"-syntax since it's reminiscent of Markdown section markers.
-E.decorateRegexp(/#.*#/, {
+var pinkBoxStyle = {
   border: 'solid',
   borderRadius: '3px',
   borderWidth: '1px',
@@ -110,16 +117,15 @@ E.decorateRegexp(/#.*#/, {
   color: 'green',
   fontWeight: 'bold',
   backgroundColor: 'pink'
-})
+}
+E.decorateRegexp(/#.*#/, { ...pinkBoxStyle, remark: 'fenced' })
 
-// ==================================================================================
-// ============= Extension: Quickly Jumping to Favorited Webpages/Videos ============
-// ==================================================================================
-
-// Often, there are a number of Youtube videos, or webpages, that I'd like to jump
-// to quickly. I'd like to have that menu of items be right here in my editor.
-// So, let's make some commands to do just that!
-
+// =====================================================================================================================
+/** Extension: Quickly Jumping to Favorited Webpages/Videos
+ *
+ * Often, there are a number of Youtube videos, or webpages, that I'd like to jump to quickly. I'd like to have that
+ * menu of items be right here in my editor. So, let's make some commands to do just that!
+ */
 commands["Youtube ~ Background audio while I'm working"] = async E => {
   let videos = {
     'Daily Supplications': 'https://youtu.be/9m9yE7qtq5w',
@@ -195,88 +201,52 @@ commands["Learning ~ Stuff I'd like to read"] = async E => {
   E.browseURL(url)
 }
 
-// ==================================================================================
-// =============== Running arbitrary CLI programs on the current file ===============
-// ==================================================================================
-
-/** `cmd+h gulp` runs Gulp on the current file, whereas `shift+cmd+h gulp` runs the
- * gulp precommit task on the entire repo.
- * I intentionally `cd` to the parent directory for those rare times when I have
- * a file open outside of its workspace.
+/** Running arbitrary CLI programs on the current file
+ *
+ * - I intentionally `cd` to the parent directory for those rare times when I have a file open outside of its workspace.
+ * - I also make use of the `shift` modifier:
+ *   + `cmd+h gulp` runs Gulp on the current file, whereas `shift+cmd+h gulp` runs Gulp on the entire repo.
+ *   + `cmd+h playwright` runs my tests in headless mode, whereas `shift + cmd + h playwright` does so in headed mode.
  */
 commands['File: Gulp tests!'] = E => {
   const cmd = E.currentPrefixArgument ? 'gulp precommit' : `npx gulp test-partial --file=${E.currentFileName()}`
   E.terminal(`cd ${E.currentDirectory()}; ${cmd}`, 'Gulp!')
 }
+commands['File: Playwright!'] = E => {
+  const headed = E.currentPrefixArg ? '--headed' : ''
+  E.terminal(` npx playwright test ${E.currentFileName()} ${headed}`)
+}
 
-// Invoke `alt+shift+f` to `f`ormat the current active editor according to existing rules;
-// For when I really want to enforce a particular style.
-// E.g., in a file that does not live in a repo with dedicated linting:
+/** Invoke `alt+shift+f` to `f`ormat the current active editor according to existing rules. For when I really want to
+ * enforce a particular style. E.g., in a file that does not live in a repo with dedicated linting.
+ */
 commands['File: Prettify!'] = E => {
-  const options = `--no-semi --print-width 120 --prose-wrap always --single-quote --trailing-comma none --arrow-parens avoid`
+  const options = `--no-semi --print-width 120 --single-quote --trailing-comma none --arrow-parens avoid`
   E.shell(`prettier ${options} --write ${E.currentFileName()}`)
   E.message(`Prettified with options:  ${options}`)
 }
 
-//===================================================================================
-//==================================== Cosmetics ====================================
-//===================================================================================
-
-// This should just be a thing. Get a random element from an array.
-Array.prototype.random = function () {
-  return this[Math.floor(Math.random() * this.length)]
-}
-
-/** The default theme leaves much to be desired; so upon startup, let's have one of
- * our favourite themes be chosen.
+/** The default theme leaves much to be desired; so upon startup, let's have one of our favourite themes be chosen.
  *
  * - Note: Cmd+K Cmd+T to see all themes and try them out on-the-fly.
  * - 'Light Pink' is from extension: @id:mgwg.light-pink-theme
  */
-let themes = ['Solarized Light', 'Snazzy Operator', 'Light Pink', 'Noctis Lux', 'Noctis Lilac', 'Hopscotch']
-E.set('workbench.colorTheme', themes.random())
-
-/** colors-as-types!
- *
- * Coding with a Fruit Salad: Semantic Highlighting
- *
- * What should be highlighted when we write code? Static keywords with fixed uses, or dynamic user-defined names?
- *
- * “Syntax” highlighting ⇨ Specific words are highlighted in strong colours so that the structure can be easily gleaned.
- * - Generally this only includes a language's keywords, such as “if, loop, begin, end, cond”.
- * - User defined names generally share one colour; usually black.
- * - Hence, an “if” block may be seen as one coloured keyword followed by a blob of black text.
- * - *Obvious keywords are highlighted while the rest remains in black!*
- *
- * “Semantic” highlighting ⇨ Identifiers obtain unique colouring.
- * - This makes it much easier to visually spot dependencies with a quick glance.
- * - One can see how data flows through a function.
- * - In dynamic languages, this is a visual form of typing: Different colours are for different names.
- * - Especially helpful for (library) names that are almost the same.
- */
-E.executeCommand('semantic-highlighting.toggleSemanticHighlights') // Extension: Semantic highlighting by malcolmmielle
-
-// https://code.visualstudio.com/docs/languages/javascript#_inlay-hints
-E.set('javascript.inlayHints.parameterNames', 'all')
-E.set('javascript.inlayHints.variableTypes.enabled', true)
-
-// Snippets:
-// Quickly create JSDoc comments for functions by typing
-// /** before the function declaration, and select the JSDoc comment snippet suggestion.
-// You can optionally even use the type information from JSDoc comments to type check your JavaScript.
-//
-// Example
-// The following pragma enables typechecking for JS, using JSDocs to get types.
-//@ts-check
-/**
- *
- * @param {number} x
- * @param {number} y
- */
-function add(x, y) {
-  return x + y
+// This should just be a thing. Get a random element from an array.
+Array.prototype.random = function () {
+  return this[Math.floor(Math.random() * this.length)]
 }
-add(1, 'nope') // This should now show as an error!
+let themes = {
+  'Solarized Light': 'vscode.theme-solarized-light',
+  'Snazzy Operator': 'aaronthomas.vscode-snazzy-operator', // https://marketplace.visualstudio.com/items?itemName=aaronthomas.vscode-snazzy-operator
+  'Light Pink': 'mgwg.light-pink-theme', // https://marketplace.visualstudio.com/items?itemName=mgwg.light-pink-theme
+  'Noctis Lux': 'liviuschera.noctis', // https://marketplace.visualstudio.com/items?itemName=liviuschera.noctis
+  'Noctis Lilac': 'liviuschera.noctis', // https://marketplace.visualstudio.com/items?itemName=liviuschera.noctis
+  Hopscotch: 'idleberg.hopscotch' // https://marketplace.visualstudio.com/items?itemName=idleberg.hopscotch
+}
+Object.keys(themes).map(name => E.installExtension(themes[name])) // Install all themes
+E.set('workbench.colorTheme', Object.keys(themes).random()) // Select a random one
+
+// Cosmetics ===========================================================================================================
 
 // Add a motavational motto to the VSCode frame window title
 E.set('window.title', '${activeEditorLong} Living The Dream (•̀ᴗ•́)و')
@@ -287,6 +257,10 @@ E.set('editor.fontLigatures', true)
 // A nice comfortable font, at a reasonable size.
 E.set('editor.fontFamily', 'Fantasque Sans Mono')
 E.set('editor.fontSize', 14)
+
+// When I click on the explorer, I want it to show me the directory hierarchy focused on my current opened editor.
+E.set('explorer.autoReveal', true)
+E.set('editor.cursorBlinking', 'phase')
 
 // When I write a word, such as “ green ” or “ #19f9d8 ”, then show it to me as that colour!
 E.set('colorize.languages', ['javascript'])
@@ -308,16 +282,32 @@ E.set('editor.guides.bracketPairs', true)
 E.set('editor.guides.highlightActiveIndentation', false)
 E.set('editor.guides.bracketPairsHorizontal', true)
 
-E.set('explorer.autoReveal', true)
-E.set('editor.rulers', [120])
-E.set('editor.tabSize', 2)
+/** Sticky scroll shows the current scope at the top of the view port.
+ *
+ * If a scope's header, such as a function name, is out of view, show it to me near the top of the editor, as I scroll.
+ */
+E.set('editor.stickyScroll.enabled', true)
 
-E.set('todohighlight.keywords', ['HERE', 'LOOK'])
+// =====================================================================================================================
 
-// Fun stuff!
-E.set('powermode.enabled', false)
-E.set('editor.cursorBlinking', 'phase')
-E.set('editor.snippetSuggestions', 'top')
+/** A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
+ *
+ * Consider a program to be written primarily to explain to another human what it is that we want the computer to do,
+ * how it is to happen, and why we can believe that we have achievied our aim.
+ * (The “another human” might be you in a few months time when the details have escaped your mind.)
+ *
+ * A program should not just compute, it should also motivate, justify & discuss.
+ * This human nature makes it easier to follow, detect errors, use elsewhere, or extend.
+ * After all, the larger part of the life of a piece of software is maintenance.
+ *
+ * Flawed programs with good discussion may be of more use in the development of related correct code,
+ * than working code that has no explanation.
+ *
+ * In VSCode, press “⌘+k ⌘+1” to fold everything up and get a nice outline view of everything here.
+ */
+
+// =====================================================================================================================
+// Below be uncommented/undiscussed dragons.
 
 //==================================================================================
 //============================= Backup all the things! =============================
@@ -410,98 +400,12 @@ E.set('editor.foldingHighlight', true)
 E.set('editor.comments.insertSpace', true)
 
 // Controls whether syntax highlighting should be copied into the clipboard.
-E.set('editor.copyWithSyntaxHighlighting', true)
+E.set('editor.copyWithSyntaxHighlighting', false)
 
 // Remove useless stuff
 E.set('editor.minimap.enabled', false)
 E.set('files.insertFinalNewline', false)
 E.set('files.trimTrailingWhitespace', true)
-
-// Stuff to move over to vscode.js =====================================================================================
-
-/** Create a new editor, setting its language, initial content, and file name. Possibly open an existing file.
- *
- * @return A promise that opens a new {@link TextEditor editor}.
- * @param options A configuration of possible options for thew new file, including:
- *   - When `content` is `null`, you get the classic VSCode "Select a language, or start typing..." transient placeholder text.
- *      - If there already exists a file with the given `name`, then we open it and *append* the given content to it.
- *   - `column` A view column in which the new editor should be shown. Defaulting to 0.
- *   - `preserveFocus` When `true` the editor will not take focus.
- *
- * - If `name` is provided, then an actual file is created ---this is to avoid VSCode's annoying "Save" dialog boxes!
- *   - If there's already a file named by `name`, then that file is opened instead.
- *
- * ### Examples
- * ```
- * // Create a new empty editor, with the usual "Select a language, or start typing..." transient placeholder text.
- * await E.newEditor()
- *
- * // Create a new editor showing the results of a shall command, but leave focus in the current editor
- * await E.newEditor({preserveFocus: true, content: E.shell("ls") })
- *
- * // Make a new empty editor, prefixed `Untitled`, whose underlying file is a temporary file.
- * // * Useful to avoid "Save dialog" when closing resulting editor.
- * E.newEditor({ name: E.shell(`mktemp -t Untitled`), content: E.shell('ls') })
- *
- * // Create a new editor, but set the language and provide some initial text
- * await E.newEditor({language: "latex", content: String.raw`\large{Hello, world!}`})
- *
- * // Create a new editor, and save it to disk ---with no prompt!
- * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
- *
- * // Open existing file (due to above line), and this time append conntent to it!
- * await E.newEditor({name: "~/Downloads/example.js", content: "console.log('hiya!')"})
- * ```
- */
-E.newEditor = async (options = { language: 'text', content: null, name: null, column: 0, preserveFocus: false }) => {
-  if (options.preserveFocus) {
-    await E.executeCommand('workbench.action.splitEditorRight')
-  }
-  if (options.name) {
-    E.shell(`touch ${options.name}`)
-    await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
-    await E.endOfEditor()
-    E.insert(options.content)
-    if (options.preserveFocus) await E.otherEditor()
-    return
-  }
-  let document = await vscode.workspace.openTextDocument(options)
-  vscode.window.showTextDocument(document, options.column, options.preserveFocus)
-  if (options.preserveFocus) await E.otherEditor()
-}
-
-/** Switch focus to the other/next open editor.
- *
- * ### Example Usage
- * ```
- * // Split the view, but keep focus here:
- *  await E.executeCommand('workbench.action.splitEditorRight'); E.otherEditor()
- * ```
- */
-E.otherEditor = () => E.executeCommand('workbench.action.navigateEditorGroups')
-
-// TODO: vscode.js should make endOfEditor actually go to the end, not just the final line!
-// ie, go to last line AND last column
-/** Move cursor to the last line of the editor. */
-E.endOfEditor = () => E.executeCommand('cursorBottom')
-
-/** Get the next word, from the current curosr position.
- * This does not get the entire word when the cursor is in the middle of it.
- *
- * @returns {string}
- *
- * ### Example usage
- * ```
- * commands["Echo word"] = { "alt+.": async E => E.message(await E.currentWord()) }
- * ```
- * Now press `alt+.` a few times and see what you see.
- */
-E.currentWord = async () => {
-  await E.executeCommand('cursorWordStartRightSelect')
-  let word = E.selection()
-  E.executeCommand('cancelSelection')
-  return word
-}
 
 // Define word at point ================================================================================================
 
@@ -517,6 +421,91 @@ commands['Define word'] = {
   }
 }
 
+// =====================================================================================================================
 // this essentially removes a lot of the distractions from your view in VS Code.
 // (As always, toggle this with Cmd+Shift+P ---or Ctrl+X+Z)
-E.executeCommand('workbench.action.toggleZenMode')
+// E.executeCommand('workbench.action.toggleZenMode')
+
+
+//======================================================== Terminals ===================================================
+
+/** You can press Ctrl+` to go to a terminal, then Ctrl+1 to go to the first editor.
+ * (Or Ctrl+2 or any number to go to that editor)
+ *
+ * However, I'd like Ctrl+` to behave as follows:
+ * 1. If the terminal is not open, open it for me.
+ * 2. If the bottom pane is not open, open it for me.
+ * 3. If the bottom pane is open, shift focus to my terminal.
+ * 4. If I'm in my terminal, then hide the bottom pane and return focus to the editor.
+ *
+ * Ctrl + Shift + ` to create a new terminal.
+ */
+// E.bindKey("ctrl+`", "workbench.action.terminal.toggleTerminal", "terminal.active")
+// This is the default setup. Neato!
+//
+// What if I want to jump to the terminal, but be maximised?
+// Easy: Ctrl+k `  open the lower pane then maximize/minimise it.
+// (From here, Ctrl+` will bring me back to the editor, when terminal is maximised).
+//
+E.bindKey('ctrl+k `', 'workbench.action.toggleMaximizedPanel', 'true')
+
+// Let's make Ctrl+ Shift+ ` open a new terminal in my editor.
+// I have placed my terminal into a editor and treat is as just another tab. I usually have it pinned and wrap my tabs. But usually navigate to it via Cmd+P. If I want it visible I usually have split groups.
+// I can quickly get back to it with Ctrl+XXX where XXX is the number, or “Cmd+P Bash”.
+//
+//
+// Note that I don't make Ctrl+` open in the editor, since at work I use VSCode Tasks to open ~11 servers for local development.
+// (Note to self: It might be be better to spawn child processes via NodeJS, and create a VSCode output channel, then have those processes spit out their content to that channel.)
+// (This itself might be a)
+E.set('terminal.integrated.defaultLocation', 'editor')
+
+/** colors-as-types!
+ *
+ * Coding with a Fruit Salad: Semantic Highlighting
+ *
+ * What should be highlighted when we write code? Static keywords with fixed uses, or dynamic user-defined names?
+ *
+ * “Syntax” highlighting ⇨ Specific words are highlighted in strong colours so that the structure can be easily gleaned.
+ * - Generally this only includes a language's keywords, such as “if, loop, begin, end, cond”.
+ * - User defined names generally share one colour; usually black.
+ * - Hence, an “if” block may be seen as one coloured keyword followed by a blob of black text.
+ * - *Obvious keywords are highlighted while the rest remains in black!*
+ *
+ * “Semantic” highlighting ⇨ Identifiers obtain unique colouring.
+ * - This makes it much easier to visually spot dependencies with a quick glance.
+ * - One can see how data flows through a function.
+ * - In dynamic languages, this is a visual form of typing: Different colours are for different names.
+ * - Especially helpful for (library) names that are almost the same.
+ */
+E.executeCommand('semantic-highlighting.toggleSemanticHighlights') // Extension: Semantic highlighting by malcolmmielle
+
+// https://code.visualstudio.com/docs/languages/javascript#_inlay-hints
+E.set('javascript.inlayHints.parameterNames', 'all')
+E.set('javascript.inlayHints.variableTypes.enabled', true)
+
+// Snippets:
+// Quickly create JSDoc comments for functions by typing
+// /** before the function declaration, and select the JSDoc comment snippet suggestion.
+// You can optionally even use the type information from JSDoc comments to type check your JavaScript.
+//
+// Example
+// The following pragma enables typechecking for JS, using JSDocs to get types.
+//@ts-check
+/**
+ *
+ * @param {number} x
+ * @param {number} y
+ */
+function add(x, y) {
+  return x + y
+}
+add(1, 'nope') // This should now show as an error!
+
+E.set('todohighlight.keywords', ['HERE', 'LOOK'])
+E.set('editor.snippetSuggestions', 'top')
+E.set('powermode.enabled', false)
+
+/** [Terminals] The new theme key terminal.inactiveSelectionBackground is available to show a different selection
+ * background color whether the terminal is focused or not to better align with the editor.
+ */
+E.set('terminal.inactiveSelectionBackground', true) // Need to update my VSCode for this to work.

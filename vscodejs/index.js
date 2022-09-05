@@ -168,6 +168,23 @@ module.exports = vscode => {
   /** The path used by `E.set` to find the user's `settings.json` file. */
   E.internal.bindKey = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json` }
 
+  // Install Extensions ====================================================================================
+
+  /** Install a specific extenion. Argument is a string of the shape `publisher.extension`.
+   *
+   * - Note: If extension already installed on machine, but disabled, this does nothing.
+   * - If it is a built-in extension, this does nothing.
+   *   + In such cases, consider executing `E.executeCommand('workbench.extensions.action.enableAll')`.
+   * ### Example Usage
+   * ```
+   *  // Press `Alt+q` to do the rewrap text editor-wide; or select a text then `Alt+q`.
+   *  E.installExtension("stkb.rewrap")  // https://marketplace.visualstudio.com/items?itemName=stkb.rewrap
+   * ```
+   */
+  E.installExtension = ext => {
+    if (!ext.startsWith('vscode')) return E.shell(`code --install-extension ${ext}`)
+  }
+
   // String, Message, Error ================================================================================
 
   /** Ensure input `x` is a string; if it's not, then stringify it.
@@ -1627,6 +1644,10 @@ module.exports = vscode => {
     return interactive
   }
 
+  /** Get the language identifier, as a string, of the currently active text editor.
+   *
+   * For example, in a JavaScript file this command yields `javascript`. */
+  E.currentLanguage = () => vscode.window.activeTextEditor.document.languageId
 
   // ================================================================================
 

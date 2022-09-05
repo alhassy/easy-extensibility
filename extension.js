@@ -1,6 +1,8 @@
-/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on - the - fly.
+/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter
+ * VSCode on-the-fly.
  *
- * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with `cmd+h`.
+ * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with
+ * `cmd+h`.
  *
  * - There is no edit-load-debug cycle; just edit-then-use!
  * - Then when you're happy with what you have, you form a full extension ---involved default approach 😱!
@@ -8,7 +10,8 @@
  *
  * # Accessibility
  * - Invoke`cmd+h tutorial` to read the tutorial on using this extension.
- * - To learn about “saving reusable functions and having them load automatically”, invoke`cmd+h find users init.js file, or provide a template`.
+ * - To learn about “saving reusable functions and having them load automatically”, invoke`cmd+h find users init.js
+ *   file, or provide a template`.
  */
 
 /* [Personal Note] Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
@@ -158,6 +161,22 @@ function activate(context) {
       } else Reflect.set(...arguments)
     }
   })
+
+  /** Converse of E.executeCommand!
+   *
+   * ### Example Usage
+   * ```
+   * // Setup a new command
+   * E.registerCommand('hello', () => E.message("hiya!"))
+   *
+   * // Use it in multiple ways
+   * E.executeCommand('hello')
+   * E.bindKey("ctrl+h", 'hello')
+   * ```
+   */
+  // E.registerCommand = (name, func) => { context.subscriptions.push(vscode.commands.registerCommand(name, func)); return func }
+  E.registerCommand = (...args) => { context.subscriptions.push(vscode.commands.registerCommand(...args)); return args }
+
 
   // Let's expose some `E.internal` functions as commands (`cmd+shift+p`)-visibile by this extension.
   let register = name =>
