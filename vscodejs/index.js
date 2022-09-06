@@ -175,11 +175,15 @@ module.exports = vscode => {
    * - Note: If extension already installed on machine, but disabled, this does nothing.
    * - If it is a built-in extension, this does nothing.
    *   + In such cases, consider executing `E.executeCommand('workbench.extensions.action.enableAll')`.
+   *
    * ### Example Usage
    * ```
    *  // Press `Alt+q` to do the rewrap text editor-wide; or select a text then `Alt+q`.
    *  E.installExtension("stkb.rewrap")  // https://marketplace.visualstudio.com/items?itemName=stkb.rewrap
    * ```
+   *
+   * ### Warning! VSCode extensions, like anything installed from the Internet, are potentially malicious!
+   *  https://www.reddit.com/r/vscode/comments/v0ak78/are_vs_code_plugins_safe/
    */
   E.installExtension = ext => {
     if (!ext.startsWith('vscode')) return E.shell(`code --install-extension ${ext}`)
