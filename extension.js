@@ -87,22 +87,78 @@ let commands = {}
 
 var E = require('vscodejs')(vscode)
 
-// Need this here so that it “inherits” the definition of `require`.
-E.internal.eval.require = (pkg, explicitPath = 'index.js') => {
-  let attempt = path => {
-    try {
-      return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`)
-    } catch (e) {
-      return
-    }
+// ! Move to vscodejs
+/** Silence all errors: Execute BODY callback; if an error occurs, return nil. Otherwise, return result of BODY.
+ *
+ * ## Examples
+ * ```
+ * let a = E.ignoreErrors(_ => [].length )
+ * console.assert(a == 0)
+ *
+ * let b = [].doesNotExist()  // => Error: [].doesNotExist is not a function
+ *
+ * let c = E.ignoreErrors(_ => [].doesNotExist() )
+ * console.assert(c == undefined)
+ * ```
+ */
+E.ignoreErrors = body => {
+  try {
+    return body()
+  } catch (e) {
+    return
   }
-  // The first `require` below is for built-in packages, like `fs`.
-  return (
-    require(pkg) || attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
-  )
 }
+// require =============================================================================================================
 
-// init.js ================================================================================
+/** The one true definition of `E.require`.
+ *
+ * # Examples
+ * ```
+ * require('axios')
+ * require('hjson')
+ * require('sqlite3')
+ * require('fs')
+ * ```
+ *
+ * # Example: Minimial server and requests for it
+ * (Python has Django, Ruby has Rails, NodeJS has ExpressJS)
+ * ```
+ * E.shell("npm install express axios body-parser")
+ *
+ * var app = require('express')()
+ * var port = 4000
+ * var count = 0
+ * var phrases = ['Hello', 'World']
+ *
+ * app.get('/hi', (req, res) =>  res.send(`${phrases.join(' ')}! ${count++}`) )
+ *
+ * // Setup parsing of data coming from POST requests.
+ * var bodyParser = require('body-parser')
+ * app.use(bodyParser.urlencoded({extended: false}))
+ * app.use(bodyParser.json())
+ *
+ * app.post('/hi/:id', (req, res) => {
+ *   const {id} = req.params    // The “:id” from above.
+ *   const {phrase} = req.body // POST payload
+ *   phrases[id ] = phrase
+ *   res.send(`Using phrase[${id}]: ${phrase}`)})
+ *
+ * var server = app.listen(port, _ => E.message(`Example app listening on port ${port} `))
+ * // server.close() // Call this whenever the abouve `.get/.post` definitions need to change!
+ *
+ * // Let's now actually make some requests! Press CMD+E a few times on each request, alterante between them.
+ * var axios = require('axios')
+ * axios.get('http://localhost:4000/hi').then(resp => E.message(resp.data))
+ * axios.post('http://localhost:4000/hi/2', {phrase: "Cats"}).then(resp => E.message(resp.data))
+ * ```
+ *
+ * ## Implementation Remarks
+ * An alternatve approach is to use “dynamic imports”: To use the `import` *function* rather than the `import` *statement*.
+ */
+E.internal.eval.require = pkg => E.ignoreErrors(_ => require(pkg)) || require(`${E.internal.require.NODE_PATH}/${pkg}`)
+// Need this here so that it “inherits” the definition of `require`.
+
+// init.js =============================================================================================================
 
 commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => {
   E.shell(
@@ -135,7 +191,7 @@ commands['Reload ~/init.js file'] = E => {
 //!! Actually load the file upon startup!
 commands['Reload ~/init.js file'](E)
 
-// ================================================================================
+// =====================================================================================================================
 
 function activate(context) {
   /** Now that we have `context` in-scope, let's alter `commands`
@@ -174,17 +230,14 @@ function activate(context) {
    * E.bindKey("ctrl+h", 'hello')
    * ```
    */
-  // E.registerCommand = (name, func) => { context.subscriptions.push(vscode.commands.registerCommand(name, func)); return func }
-  E.registerCommand = (...args) => { context.subscriptions.push(vscode.commands.registerCommand(...args)); return args }
+  E.registerCommand = (...args) => {
+    context.subscriptions.push(vscode.commands.registerCommand(...args))
+    return args
+  }
 
-
-  // Let's expose some `E.internal` functions as commands (`cmd+shift+p`)-visibile by this extension.
-  let register = name =>
-    context.subscriptions.push(
-      vscode.commands.registerCommand(`easy-extensibility.${name}`, E.internal[name](commands))
-    )
-  register('evaluateSelection')
-  register('executeRegisteredCommand')
+  // Let's expose some `E.internal` functions as commands (`cmd + shift + p`)-visibile by this extension.
+  E.registerCommand('easy-extensibility.evaluateSelection', E.internal.evaluateSelection(commands))
+  E.registerCommand('easy-extensibility.executeRegisteredCommand', E.internal.executeRegisteredCommand(commands))
 }
 
 module.exports = {

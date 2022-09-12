@@ -184,6 +184,9 @@ module.exports = vscode => {
    *
    * ### Warning! VSCode extensions, like anything installed from the Internet, are potentially malicious!
    *  https://www.reddit.com/r/vscode/comments/v0ak78/are_vs_code_plugins_safe/
+   *
+   * ### See also: Speed and Disabiling Builtin Extensions
+   * https://www.reddit.com/r/vscode/comments/ras74y/do_disabled_extensions_too_make_vscode_slow/
    */
   E.installExtension = ext => {
     if (!ext.startsWith('vscode')) return E.shell(`code --install-extension ${ext}`)
@@ -969,6 +972,11 @@ module.exports = vscode => {
    * ```
    * // Show every key stroke I press in a nice large pane near the middle-bottom of my screen!
    * E.executeCommand('workbench.action.toggleScreencastMode')
+   *
+   * // We can pass-in arguments as well:
+   * E.executeCommand('workbench.action.findInFiles', {
+   * query: "Hello!",
+   * filesToInclude: await E.readInput('Directory to search in:') })
    * ```
    */
   E.executeCommand = vscode.commands.executeCommand
