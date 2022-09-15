@@ -37,7 +37,7 @@ module.exports = vscode => {
   const conf = vscode.workspace.getConfiguration("easy-extensibility").get
   const isWin = process.platform === "win32"
   const configdir = getConfigDir()
-  const userDir = isWin ? path.normalize(path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)) : process.env.HOME
+  const userDir = isWin ? path.normalize(process.env.USERPROFILE) : process.env.HOME
 
   const E = {}
 

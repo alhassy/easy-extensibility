@@ -19,30 +19,30 @@
 	],
 	"main": "./extension.js",
 	"contributes": {
-		"configuration" : {
+		"configuration": {
 			"type": "object",
 			"title": "Easy Extensibility",
 			"properties": {
-			  "easy-extensibility.rcFile": {
-				"type": "string",
-				"default": "~/.init.js",
-				"description": "Specifies the file path containing the main rc file to use."
-			  },
-			  "easy-extensibility.npmCommand": {
-				"type": "string",
-				"default": "npm",
-				"description": "Specifies the npm command from nodejs."
-			  },
-			  "easy-extensibility.dateCommand.unix": {
-				"type": "string",
-				"default": "date +%H:%M:%S",
-				"description": "Specifies the date command on unix like platform."
-			  },
-			  "easy-extensibility.dateCommand.windows": {
-				"type": "string",
-				"default": "date /T",
-				"description": "Specifies the date command on windows platform."
-			  }
+				"easy-extensibility.rcFile": {
+					"type": "string",
+					"default": "~/.init.js",
+					"description": "Specifies the file path containing the main rc file to use."
+				},
+				"easy-extensibility.npmCommand": {
+					"type": "string",
+					"default": "npm",
+					"description": "Specifies the npm command from nodejs."
+				},
+				"easy-extensibility.dateCommand.unix": {
+					"type": "string",
+					"default": "date +%H:%M:%S",
+					"description": "Specifies the date command on unix like platform."
+				},
+				"easy-extensibility.dateCommand.windows": {
+					"type": "string",
+					"default": "date /T",
+					"description": "Specifies the date command on windows platform."
+				}
 			}
 		},
 		"snippets": [
@@ -121,6 +121,10 @@
 		"id": "aa86014f-9133-49b7-b981-36c44d1328a7",
 		"publisherDisplayName": "Musa Al-hassy",
 		"publisherId": "2d11d29f-7371-4436-8544-10d8f2124f1e",
-		"isPreReleaseVersion": false
+		"isPreReleaseVersion": false,
+		"targetPlatform": "undefined",
+		"isApplicationScoped": false,
+		"updated": true,
+		"preRelease": false
 	}
 }
