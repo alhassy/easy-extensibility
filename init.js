@@ -25,9 +25,9 @@
  * - In VSCode, press “⌘+k ⌘+1” to fold everything up and get a nice outline view of everything here.
  * /
 
-//===================================================== Simple Starters ================================================
+ //===================================================== Simple Starters ================================================
 
-/** 🚀 Whenever we open VSCode, let's see a motivating message! 💪
+ /** 🚀 Whenever we open VSCode, let's see a motivating message! 💪
  *
  */
 let welcome = `Welcome ${process.env.USER}! Today is ${E.shell('date')}!`
@@ -40,9 +40,42 @@ E.message(welcome, button)
  */
 commands['Enclose selection in unicode quotes'] = { 'cmd+i q': E => E.replaceSelectionBy(str => `“${str}”`) }
 
+/** Unicode input wherever I go!
+ *
+ * I like using Unicode symbols, such as “⟦Σ xs⟧ ≈ xs.reduce( (x, y) => x + y, 0, xs)”.
+ *
+ * `yellpika.latex-input` is pretty good! Just press `\` then keep typing to see possible snippet completions.
+ * - Works anywhere!
+ * - E.g., \[[ ENTER ≈ \]]  Yields ⟦≈⟧  (any bracket completions // disappear whne pressing enter.)
+ *
+ * Similar remarks apply to `gao-shuhua.vsc-unicode-latex` ---which also has an online listing of all possible
+ * completions. It also has interesting symbols, a larger set, but requires lots of typing: \openleftbracket just to
+ * get ⟦.
+ */
+E.installExtension(`yellpika.latex-input`)
+
 /** Bring some joy to my day upon startup. */
 commands['Make me smile!'] = E => E.terminal('fortune | cowsay | lolcat')
-commands['Make me smile!'](E)
+// commands['Make me smile!'](E)
+
+// Show me a motiviating poster, right inside VSCode.
+commands['Positive Quote: Show it nicely!'] = async E => {
+  let url = 'https://www.realsimple.com/work-life/life-strategies/inspiration-motivation/positive-quotes'
+  let { data } = await axios.get(url)
+  let first = x => (x ? x[1] : null)
+  Array.prototype.random = function () {
+    return this[Math.floor(Math.random() * this.length)]
+  }
+  let { src, alt } = data
+    .match(/<img([^\>]*)\>/g)
+    .map(img => ({ src: first(img.match(/data-src=(.*)/)), alt: first(img.match(/alt=(.*)/)) }))
+    .filter(img => img.src && img.alt.startsWith(`"Positive motivating quotes`))
+    .random()
+  E.webPanel(
+    alt,
+    `<img style="display: block;margin-left: auto;margin-right: auto;width: 50%;" src=${src} width="800" height="800">`
+  )
+}
 
 /** I'd like to get my “TODO” keywords highlighted, a trailing colon is required; e.g., TODO: FIXME:. */
 E.installExtension('wayou.vscode-todo-highlight') // https://marketplace.visualstudio.com/items?itemName=wayou.vscode-todo-highlight
@@ -78,6 +111,47 @@ E.set('editor.rulers', [
   { column: 0, color: '#0000' } // with alpha-channel 0 = transparent
 ])
 
+// ================================================== Some nice extensions =============================================
+
+/** Obtain an “eye” icon that toggles comment transparency. Sometimes you only want to focus on the code.
+ *
+ */
+E.installExtension(`krembolabs.comment-styler`)
+
+/** A tool for aligning the inline trailing comments.
+ *
+ * Does not play nice with inline overlays for JS inferred type annotations.
+ */
+E.installExtension(`huangbaoshan.comment-aligner`)
+
+/** Obtain an new icon “<-//” that lets me style my code, any code, as if I were using a word processor!
+ * Funky colours, various sizes, etc.
+ *
+ * Very useful when sharing screen, or sharing a screen shot, and want things to be emphasised.
+ *
+ * Warning! For 𝗯𝗼𝗹𝗱, 𝘪𝘵𝘢𝘭𝘪𝘤𝘴, u͟n͟d͟e͟r͟l͟i͟n͟e, 𝕠𝕦𝕥𝕝𝕚𝕟𝕖, your selected text is actually replaced by
+ * the corresponding unicode. As such, the altertions persist and so it's best to only do this on comments!
+ * However, font size and colours cannot be hidden in unicode and so are ignored when you share the file to a different
+ * IDE, but are preserved in VSCode even if you open/close the file.
+ */
+E.installExtension(`krembolabs.comment-styler`)
+
+/** Autohide the sidebar and terminal panel, whenever the user clicks into the text editor. */
+E.installExtension(`sirmspencer.vscode-autohide`)
+
+/** Get a nice sidebar, in the left-most area, for anchors or “documented bookmarks” to various locations in my files.
+ *
+ * Place anchors within comments or strings to place bookmarks within the context of your code. Anchors can be used to
+ * track TODOs, write notes, create foldable sections, or to build a simple navigation making it easier to navigate your
+ * files.
+ *
+ * There are `SECTION` anchors for deliminting a chunk into navigationable chunks, and `LINK` anchors that are followed
+ * by a file (and optional line numer or anchor) that we can click to take us there.
+ */
+E.installExtension(`ExodiusStudios.comment-anchors`)
+// ANCHOR This is an example anchor, neato!
+// LINK init.js:12
+
 //===================================================== Formatted Text =================================================
 
 /** A program is a literate work, written by a human & read by a human ---incidentally also by a machine. This includes
@@ -93,16 +167,16 @@ E.set('editor.rulers', [
  * it can also be about ~fun-and-whimsy~; +lmaof+. Otherwise, it's all just `work`; e.g., “ This function has arguments
  * being a numeric `age` and a string `name` . ”
  */
-E.decorateRegexp(/\*\* .*/, { backgroundColor: 'pink' }) // I want docstring “intro” sentences nicely coloured too!
-E.decorateRegexp(/\*\s+#.*/, { backgroundColor: 'pink' }) // Also colour doc subsection lines.
+E.decorateRegexp(/\*\* .*/, { backgroundColor: 'pink', remark: '**' }) // I want docstring “intro” sentences nicely coloured too!
+E.decorateRegexp(/\*\s+#.*/, { backgroundColor: 'pink', remark: '#*' }) // Also colour doc subsection lines.
 E.decorateRegexp(/\*[^ ]*\*/, { fontWeight: 'bold' }) // *Bold*
 E.decorateRegexp(/_[^ ]*_/, { textDecoration: 'underline 2px' }) // Look _underline_ text!
 // Comments are italics by default, so /slashes/ make text empahised by being normal font.
 E.decorateRegexp(/\/[^ ]*\//, { fontStyle: 'normal' })
-E.decorateRegexp(/\+[^ ]*\+/, { textDecoration: 'line-through 2px' }) // +Strikethrough+ text
+E.decorateRegexp(/\+[^ \+]*\+/, { textDecoration: 'line-through 2px' }) // +Strikethrough+ text
 E.decorateRegexp(/`[^ $]*`/, { border: 'double', borderRadius: '3px', borderWidth: '2px' }, { disable: !true }) // `code`
 E.decorateRegexp(/~[^ \n]*~/, { fontStyle: 'cursive', textDecoration: 'underline wavy 2px' }) // ~wave-to-the-moon~
-E.decorateRegexp(/[^\/]\[.[^ ]*\]/, { border: 'dashed', borderRadius: '3px', borderWidth: '2px' }) // [boxed]
+// E.decorateRegexp(/[^\/]\[.[^ ]*\]/, { border: 'dashed', borderRadius: '3px', borderWidth: '2px' }) // [boxed]
 
 /** Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline. I like to use
  * this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.  I like the
@@ -123,7 +197,7 @@ E.decorateRegexp(/#.*#/, { ...pinkBoxStyle, remark: 'fenced' })
 // =====================================================================================================================
 /** Extension: Quickly Jumping to Favorited Webpages/Videos
  *
- * Often, there are a number of Youtube videos, or webpages, that I'd like to jump to quickly. I'd like to have that
+ *  Often, there are a number of Youtube videos, or webpages, that I'd like to jump to quickly. I'd like to have that
  * menu of items be right here in my editor. So, let's make some commands to do just that!
  */
 commands["Youtube ~ Background audio while I'm working"] = async E => {
@@ -138,68 +212,98 @@ commands["Youtube ~ Background audio while I'm working"] = async E => {
   E.browseURL(url)
 }
 
-commands["Learning ~ Stuff I'd like to read"] = async E => {
-  let topics = {
-    'VSCode / Development Workflows': 'https://egghead.io/courses/development-workflows-in-vscode',
-    'Archives / VSCode / Keyboard shortcuts to become a VS Code ninja':
-      'https://blog.logrocket.com/learn-these-keyboard-shortcuts-to-become-a-vs-code-ninja/',
-    'VSCode / Basics ~ Egghead': 'https://egghead.io/courses/vscode-basics',
-    'VSCode / How to debug Playwright tests':
-      'https://medium.com/@anastasiya.mazheika/how-to-debug-playwright-tests-in-vscode-fa0126d9162f',
-    'VSCode / JavaScript Programming': 'https://code.visualstudio.com/docs/languages/javascript#_code-actions-on-save',
-    'VSCode / Refactoring source code in Visual Studio Code': 'https://code.visualstudio.com/docs/editor/refactoring',
-    'VSCode / QA / 5 VSCode Extensions I Use Daily to Manage My Remote Teams | by Ben Newton | Geek Culture | Medium':
-      'https://medium.com/geekculture/5-vscode-extensions-i-use-daily-to-manage-my-remote-teams-21d098c2f702',
-    'VSCode / QA / Jira in vscode': 'https://marketplace.visualstudio.com/items?itemName=Atlassian.atlascode',
-    'VSCode / How to Set Up VS Code Like a Pro in Just 5 Minutes | by Dr. Derek Austin 🥳 | Better Programming':
-      'https://betterprogramming.pub/how-to-set-up-vs-code-like-a-pro-in-just-5-minutes-65aaa5788c0d',
-    'VSCode / Best VSCode Themes: Top 15 Themes For Visual Studio Code | SPEC INDIA':
-      'https://www.spec-india.com/blog/vscode-themes',
+/** Keeping data, URLs, in an auxilary `init.json` file.
+ *
+ * I have a bunch of URLs that I'd like to browse through eventually, and I'd like to have access to them from one
+ * central location: My editor.
+ * 1. I'd like to easily/mechanically add to my list of URLs, along with their dedicated topic.
+ * 2. I'd like to easily/tersely declare commands to open my URLs nicely.
+ *
+ * So let's package up the above design pattern of "Youtube ~ Background audio while I'm working" into a utility.
+ */
 
-    'JS / Async / Asynchronous iteration • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_async-iteration.html',
-    'JS / Async / Asynchronous programming in JavaScript • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_async-js.html',
-    'JS / Async / Async functions • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_async-functions.html',
-    'JS / Async / Promises for asynchronous programming [ES6] • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_promises.html',
-    'JS / JS Visualizer 9000': 'https://www.jsv9000.app/',
-    'JS / Async / Asynchronous programming in JavaScript • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_async-js.html',
-    'JS / Async / Async functions • JavaScript for impatient programmers (ES2022 edition)':
-      'https://exploringjs.com/impatient-js/ch_async-functions.html',
-    'JS / Error handling': 'https://javascript.info/error-handling',
-    'JS / Async / Handling Async Operations in Node.js | by Prachi | JavaScript in Plain English':
-      'https://javascript.plainenglish.io/how-nodejs-works-event-loop-handling-async-operation-4bfc2781110f',
-    'JS / Async / Javascript Async Fundamentals': 'https://www.netguru.com/blog/javascript-async-fundamentals',
-
-    'Algos / RapidAPI Learn': 'https://rapidapi.com/learn',
-    'Algos / Algorithm Visualizer': 'https://algorithm-visualizer.org/',
-
-    'Git / Standup': 'https://dev.to/joeljuca/git-standup-25gm ',
-    'Git / more standup': 'https://levelup.gitconnected.com/how-to-use-git-as-a-standup-tool-8e363013cd9a',
-    'Git / even more git standup': 'https://github.com/kamranahmedse/git-standup',
-    'Git / yet more git standup': 'https://github.com/tj/git-extras/blob/master/Commands.md#git-standup',
-    'Git / Learn Git Branching': 'https://learngitbranching.js.org/',
-
-    'CSS / CSS-Tricks - Tips, Tricks, and Techniques on using Cascading Style Sheets': 'https://css-tricks.com/',
-    'HTML / HTML For Beginners The Easy Way: Start Learning HTML & CSS Today': 'https://html.com/',
-
-    'QA / dev metrics': 'https://waydev.co/software-development-metrics/',
-    'QA / How to prevent code reviews from slowing down your team':
-      'https://www.sheshbabu.com/posts/how-to-prevent-code-reviews-from-slowing-down-your-team/',
-    'QA / Speed up your code reviews using ESLint and Prettier':
-      'https://www.sheshbabu.com/posts/speed-up-your-code-reviews-using-eslint-and-prettier/',
-    'QA / Why Meetings Cost More than MacBook Pros - the Business Case for Fewer Developers in Meetings : r/programming':
-      'https://www.reddit.com/r/programming/comments/ujpxmy/why_meetings_cost_more_than_macbook_pros_the/',
-
-    'Misc / GREX!!! Rewritten in Rust: Modern Alternatives of Command-Line Tools':
-      'https://zaiste.net/posts/shell-commands-rust/'
+//! Move to VSCodeJS ---ASYNC
+var HJSON = require('hjson')
+var fs = require('fs')
+E.withJSON = async (file, callback, newFile) => {
+  file = file.replace(/~/g, process.env.HOME)
+  try {
+    let data = newFile ? {} : HJSON.parse(fs.readFileSync(file).toString())
+    await callback(data)
+    fs.writeFileSync(file, JSON.stringify(data, null, 2)) // Intentionally using JSON here.
+  } catch (error) {
+    console.error(`🤯 Oh no! ${error}`)
+    console.error(callback.toString())
+    process.exit(0)
   }
-  const url = await E.readInput('What do you want to (re)learn about?', topics)
-  E.browseURL(url)
 }
+
+var makeBrowseCommand = (title, prompt = 'Which do you want to open?') => {
+  commands[title] = E =>
+    E.withJSON('~/easy-extensibility/init.json', async data => {
+      let videos = data[title]
+      const url = await E.readInput(prompt, videos)
+      E.browseURL(url)
+    })
+}
+
+// Here's two example new commands: They get the JSON URLs, display them nicely, let me pick one, then open it.
+makeBrowseCommand(
+  "Youtube ~ Videos I'd like to watch later / Iraqi Culture",
+  'Which cultural tidbit do you want to learn about?'
+)
+makeBrowseCommand("Learning ~ Stuff I'd like to read", 'What do you want to (re)learn about?')
+
+var axios = require('axios')
+// Example: urlTitle('http://www.youtube.com/watch?v=jhvUqV3qeC0').then(E.message)
+var urlTitle = async url => {
+  let { data } = await axios.get(url)
+  return data.match(/<title>([^<]*)<\/title>/)[1]
+}
+
+/*
+
+  http://www.youtube.com/watch?v=jhvUqV3qeC0
+*/
+commands['Save URL from clipboard for later learning/watching/listening'] = async E =>
+  await E.withJSON('~/easy-extensibility/init.json', async data => {
+    let url = await E.clipboardRead()
+    let title = await urlTitle(url)
+    let topic = await E.readInput(
+      'Where do you want to place this URL?',
+      Object.keys(data).filter(x => x != 'README')
+    )
+    if (!data[topic]) data[topic] = {}
+    data[topic][title] = url
+    E.message(`${topic} got “${title}”`)
+  })
+
+// ? Make a new file “init.json” with the contents "{}".
+E.withJSON(
+  '~/easy-extensibility/init.json',
+  data => (data.README = 'This file contains data for use in my ~/init.js file')
+)
+
+// We can stick our data in there, like this:
+E.withJSON('~/easy-extensibility/init.json', data => {
+  data['Youtube / Background'] = {
+    'Daily Supplications': 'https://youtu.be/9m9yE7qtq5w',
+    'Uncle Iroh': 'https://youtu.be/jhvUqV3qeC0',
+    'Oh Hussain!': 'https://youtu.be/6EHroVqxWDo',
+    'ASMR ~ Walking Vancouver': 'https://youtu.be/hL2NYxKGTts',
+    'ASMR ~ Vancouver Cafe': 'https://youtu.be/7sg-dfYLGRQ'
+  }
+})
+
+// Then, we do:
+commands["Youtube ~ Background audio while I'm working"] = E =>
+  E.withJSON('~/easy-extensibility/init.json', async data => {
+    let videos = data['Youtube / Background']
+    const url = await E.readInput('What do you want to listen to?', videos)
+    E.browseURL(url)
+  })
+//
+// ! TODO: Relocate this and the above block to tutorial.js, on E.withJSON.
 
 /** Running arbitrary CLI programs on the current file
  *
@@ -220,10 +324,12 @@ commands['File: Playwright!'] = E => {
 /** Invoke `alt+shift+f` to `f`ormat the current active editor according to existing rules. For when I really want to
  * enforce a particular style. E.g., in a file that does not live in a repo with dedicated linting.
  */
-commands['File: Prettify!'] = E => {
-  const options = `--no-semi --print-width 120 --single-quote --trailing-comma none --arrow-parens avoid`
-  E.shell(`prettier ${options} --write ${E.currentFileName()}`)
-  E.message(`Prettified with options:  ${options}`)
+commands['File: Prettify!'] = {
+  'Alt+P': E => {
+    const options = `--no-semi --print-width 120 --single-quote --trailing-comma none --arrow-parens avoid`
+    E.shell(`prettier ${options} --write ${E.currentFileName()}`)
+    E.message(`Prettified with options:  ${options}`)
+  }
 }
 
 /** The default theme leaves much to be desired; so upon startup, let's have one of our favourite themes be chosen.
@@ -426,7 +532,6 @@ commands['Define word'] = {
 // (As always, toggle this with Cmd+Shift+P ---or Ctrl+X+Z)
 // E.executeCommand('workbench.action.toggleZenMode')
 
-
 //======================================================== Terminals ===================================================
 
 /** You can press Ctrl+` to go to a terminal, then Ctrl+1 to go to the first editor.
@@ -509,3 +614,69 @@ E.set('powermode.enabled', false)
  * background color whether the terminal is focused or not to better align with the editor.
  */
 E.set('terminal.inactiveSelectionBackground', true) // Need to update my VSCode for this to work.
+
+// “m”y own extended version of the “f”ind files command.
+//
+/** Sometimes I wish to do a textual search in a directory that is not the current workspace.
+ *
+ * # Usage
+ * 1. Select some text, then `cmd+m f` OR `cmd+h find dir`, joy!
+ * 2. If no text is selected, you'll be get to the search pane and can enter text there.
+ *
+ * # Remarks
+ * - This can be done by opening the directory I want in the file explorer, then right-clicking and selecting
+ *   Find-in-Folder.
+ * - That's too much for me!
+ * - As such, I've made this handy-dandy utility.
+ *
+ * Moreover, it disables some stuff that I would usually want, such as regexp, case sensativity, and looking into
+ * ignored locations. It's this extra bit that makes this utility handy, otherwise I could just `Cmd + Shift + F` then
+ * enter the directory and search term manually.
+ */
+commands['Find in a given directory'] = {
+  'cmd+m f': async E =>
+    E.executeCommand('workbench.action.findInFiles', {
+      query: E.selection(),
+      filesToInclude: await E.readInput('Directory to search in:'),
+      useExcludeSettingsAndIgnoreFiles: false,
+      isRegex: false,
+      isCaseSensitive: false,
+      filesToExclude: './*.css'
+    })
+}
+
+/** Edit CSV files with a nice table UI, akin to Excel.
+ *
+ * - Execute the command “edit as csv” to toggle between the table UI and the default CSV look.
+ * - Not needed atm, I rarely play with CSV files.
+ */
+// E.installExtension('janisdd.vscode-edit-csv')
+
+/** Get a smart backspace button; various other features! */
+E.installExtension('jasonlhy.hungry-delete')
+// Delete all vertical whitespace
+E.bindKey('ctrl+backspace', 'extension.hungryDelete')
+
+/* Printing objects on Node.js =========================================================================================
+   var axios = require('axios') // Just for example, `posts`, below.
+   var posts = await axios.get('https://jsonplaceholder.typicode.com/posts')
+
+   // My current implementation, cmd+e's internalEchoFunction, crashes here:
+   posts // Converting circular structure to JSON --> ...
+   E.string(posts) // This fails too!
+
+   // This approach works nicely!
+   var util = require("util")
+   util.inspect(posts, false, null) // A nice object
+
+   // ? Maybe this is enough?
+   E.string = obj => typeof obj == 'string'? obj : util.inspect(obj)
+   E.string = obj => util.inspect(obj)
+
+   var obj = {name: 'musa', act: x => x}
+
+   E.message("huh?")         // This makes me see a Promise~object message! Make the echo message avoid this pending notice when we're dealing with E.message in-particular!
+   await E.message("hello")
+*/
+
+// ? Note that Cmd+/ toggles comments, works nicely with selections.

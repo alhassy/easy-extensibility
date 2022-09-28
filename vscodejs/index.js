@@ -3,11 +3,14 @@
  * The default `vscode` API is too low-level. Users are forced to worry about windows
  * and editor objects for the sake of inserting some text or retriving selected regions of text.
  *
+ * See also: https://alhassy.com/vscode-is-itself-a-javascript-repl
+ *
  * ### Example Usage
  * ```
  * // In your extension.js you would have:
  * const vscode = require('vscode')
  * const E = require('vscodejs')(vscode)
+ * E.message("Hello, world!")
  * ```
  *
  * ### Active Editors
@@ -395,7 +398,8 @@ module.exports = vscode => {
    * ```
    *
    * ### See also
-   * `E.rxEscape` This escapes regular expression operators in strings.
+   * - `E.rxEscape` This escapes regular expression operators in strings.
+   * - https://alhassy.com/vscode-beautifully-marking-up-comments
    */
   E.decorateRegexp = (rx, style = { backgroundColor: 'green' }, options = { disable: false }) => {
     let ed = vscode.window.activeTextEditor
@@ -1373,7 +1377,7 @@ module.exports = vscode => {
       })
 
     if (currentPrefixArgument) {
-      E.insert(`\n${result}`)
+      E.insert(`\n${E.string(result)}`)
       return
     }
 
@@ -1598,6 +1602,8 @@ module.exports = vscode => {
    * f.setAlwaysOnTop(true);
    * JOptionPane.showMessageDialog(f, "Hello World");
    * ```
+   *
+   * See also: https://alhassy.com/making-vscode-itself-a-java-repl
    */
   E.REPL = config => {
 
