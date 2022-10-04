@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- logo=Gnu-Emacs  ~~~ a nice big `E` ;-) !-->
-<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.2.6-informational?logo=javascript"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.2.11-informational?logo=javascript"></a>
 
 <span>
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GNU_3-informational?logo=read-the-docs"></a>

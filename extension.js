@@ -1,6 +1,8 @@
-/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter VSCode on - the - fly.
+/** Overall Goal: VSCode is a living JavaScript interpreter, so we should be able to execute arbitrary JS to alter
+ * VSCode on-the-fly.
  *
- * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with `cmd+h`.
+ * The intent is you can quickly build extensions quickly by registering them with `cmd+e` then calling them with
+ * `cmd+h`.
  *
  * - There is no edit-load-debug cycle; just edit-then-use!
  * - Then when you're happy with what you have, you form a full extension ---involved default approach 😱!
@@ -8,7 +10,11 @@
  *
  * # Accessibility
  * - Invoke`cmd+h tutorial` to read the tutorial on using this extension.
- * - To learn about “saving reusable functions and having them load automatically”, invoke`cmd+h find users init.js file, or provide a template`.
+ * - To learn about “saving reusable functions and having them load automatically”, invoke`cmd+h find users init.js
+ *   file, or provide a template`.
+ *
+ * # See Also
+ * https://alhassy.com/vscode-is-itself-a-javascript-repl
  */
 
 /* [Personal Note] Select the following fragment, then cmd+e to produce the snippets that provide code completion with docstrings.
@@ -86,22 +92,78 @@ let commands = {}
 
 var E = require('vscodejs')(vscode)
 
-// Need this here so that it “inherits” the definition of `require`.
-E.internal.eval.require = (pkg, explicitPath = 'index.js') => {
-  let attempt = path => {
-    try {
-      return require(`${E.internal.require.NODE_PATH}/${pkg}/${path}`)
-    } catch (e) {
-      return
-    }
+// ! Move to vscodejs
+/** Silence all errors: Execute BODY callback; if an error occurs, return nil. Otherwise, return result of BODY.
+ *
+ * ## Examples
+ * ```
+ * let a = E.ignoreErrors(_ => [].length )
+ * console.assert(a == 0)
+ *
+ * let b = [].doesNotExist()  // => Error: [].doesNotExist is not a function
+ *
+ * let c = E.ignoreErrors(_ => [].doesNotExist() )
+ * console.assert(c == undefined)
+ * ```
+ */
+E.ignoreErrors = body => {
+  try {
+    return body()
+  } catch (e) {
+    return
   }
-  // The first `require` below is for built-in packages, like `fs`.
-  return (
-    require(pkg) || attempt(explicitPath) || attempt('src/index') || attempt('lib/index') || attempt(`bundle/${pkg}`)
-  )
 }
+// require =============================================================================================================
 
-// init.js ================================================================================
+/** The one true definition of `E.require`.
+ *
+ * # Examples
+ * ```
+ * require('axios')
+ * require('hjson')
+ * require('sqlite3')
+ * require('fs')
+ * ```
+ *
+ * # Example: Minimial server and requests for it
+ * (Python has Django, Ruby has Rails, NodeJS has ExpressJS)
+ * ```
+ * E.shell("npm install express axios body-parser")
+ *
+ * var app = require('express')()
+ * var port = 4000
+ * var count = 0
+ * var phrases = ['Hello', 'World']
+ *
+ * app.get('/hi', (req, res) =>  res.send(`${phrases.join(' ')}! ${count++}`) )
+ *
+ * // Setup parsing of data coming from POST requests.
+ * var bodyParser = require('body-parser')
+ * app.use(bodyParser.urlencoded({extended: false}))
+ * app.use(bodyParser.json())
+ *
+ * app.post('/hi/:id', (req, res) => {
+ *   const {id} = req.params    // The “:id” from above.
+ *   const {phrase} = req.body // POST payload
+ *   phrases[id ] = phrase
+ *   res.send(`Using phrase[${id}]: ${phrase}`)})
+ *
+ * var server = app.listen(port, _ => E.message(`Example app listening on port ${port} `))
+ * // server.close() // Call this whenever the abouve `.get/.post` definitions need to change!
+ *
+ * // Let's now actually make some requests! Press CMD+E a few times on each request, alterante between them.
+ * var axios = require('axios')
+ * axios.get('http://localhost:4000/hi').then(resp => E.message(resp.data))
+ * axios.post('http://localhost:4000/hi/2', {phrase: "Cats"}).then(resp => E.message(resp.data))
+ * ```
+ *
+ * ## Implementation Remarks
+ * An alternatve approach is to use “dynamic imports”: To use the `import` *function* rather than the `import` *statement*.
+ */
+E.internal.eval.require = pkg => E.ignoreErrors(_ => require(pkg)) || require(`${E.internal.require.NODE_PATH}/${pkg}`)
+// Need this here so that it “inherits” the definition of `require`.
+
+// init.js =============================================================================================================
 
 commands["Open the tutorial; I'd like to learn more about using cmd+E!"] = E => {
   E.shell(
@@ -136,14 +198,142 @@ commands['Reload rc file'] = E => {
 //!! Actually load the file upon startup!
 commands['Reload rc file'](E)
 
-// ================================================================================
+// =====================================================================================================================
+
+var HJSON = require('hjson')
+var fs = require('fs')
+
+// TODO: This is not yet released!
+/** Alter the contents of a JSON file as if it were a JavaScript object.
+ *
+ * - `path : string` is a filepath to a `.json` file.
+ * - `callback : function` is a (possibly async) function that mutates a given JS object.
+ * - `newFile : boolean` indicates whether this is a completely new file, in which case `callback` is provided with an empty object.
+ *
+ * Trying to access a JSON file that does not exist, when not enabling `newFile`, will result in an error.
+ *
+ * Write the JSON files, and format it nicely.
+ *
+ * ### Example use
+ * ```
+ * // Add a new `WOAH` key to the `mars-bur` configuration file.
+ * withJSON("~/api-platform-server/seeds/prod/data/mars-bur.json", data => data.WOAH = 12)
+ * ```
+ *
+ * ### Warning! ---Also Design Descision Discussion
+ *
+ * A purely functional approach would require `callback` to have the shape `data => {...; return data}`.
+ * However, we anticaipate that most uses will be to update a field of `data` and so `callback` will
+ * have the shape `data => {data.x = y; return data}` and we want to reduce the ceremony: We work with mutable references,
+ * so that `data => data.x = y` is a sufficient shape for `callback`. However, this comes at the cost that we cannot
+ * wholesale alter a JSON file ---which is an acceptable tradeoff, since this is likely a rare use case.
+ *
+ * ```
+ * withJSON(`~/myfile.json`, data => data = {x: 1, y: 2})      // BAD! Will not alter the underyling JSON file.
+ * withJSON(`~/myfile.json`, data => {data.x = 1; data.y = 2}) // GOOD!
+ * ```
+ *
+ * A program should not just compute, it should also motivate, justify & discuss.
+ * This human nature makes it easier to follow, detect errors, use elsewhere, or extend.
+ * After all, the larger part of the life of a piece of software is maintenance.
+ *
+ * Flawed programs with good discussion may be of more use in the development of related correct code,
+ * than working code that has no explanation.
+ */
+E.withJSON = (file, callback, newFile) => {
+  file = file.replace(/~/g, process.env.HOME)
+  try {
+    let data = newFile ? {} : HJSON.parse(fs.readFileSync(file).toString())
+    callback(data)
+    fs.writeFileSync(file, JSON.stringify(data, null, 2)) // Intentionally using JSON here.
+  } catch (error) {
+    console.error(`🤯 Oh no! ${error}`)
+    console.error(callback.toString())
+    process.exit(0)
+  }
+}
+
+// =====================================================================================================================
+
+var { randomUUID } = require('crypto')
+
+// =====================================================================================================================
 
 function activate(context) {
+  /** Converse of E.executeCommand!
+   *
+   * ### Example Usage
+   * ```
+   * // Setup a new command
+   * E.registerCommand('hello', () => E.message("hiya!"))
+   *
+   * // Use it in multiple ways
+   * E.executeCommand('hello')
+   * E.bindKey("ctrl+h", 'hello')
+   * ```
+   */
+  E.registerCommand = (...args) => {
+    context.subscriptions.push(vscode.commands.registerCommand(...args))
+    return args
+  }
+
+  // ! TODO: Make a dummy E.regiterCommand within VSCodeJS, then keep the above definition
+  // ! That way, we can move the stuff below over to VSCodeJS too!
+  // ! Thereby reducing the length of this file.
+
+  /*
+  ```
+  commands.hello = E => E.message("Hello, World!")
+E.bindKey("cmd+i h", 'hello')
+// Equivalently, more or less:
+// (This one does not add a new command to the Cmd+H user pallete.)
+E.bindKey("cmd+i h", E => E.message("Hello, World 2!"))
+```
+  */
+  E.bindKey = (key, command, when = 'editorTextFocus') => {
+    var commandName
+    if (typeof command === 'function') {
+      commandName = `anonymousBindKeyCommand${randomUUID().replace(/-/g, '')}`
+      E.ignoreErrors(_ => E.registerCommand(commandName, () => command(E)))
+    }
+    E.withJSON(E.internal.bindKey.path, keys => {
+      E.warning(`${keys}`)
+      // Override any existing binding for the given key.
+      // ? keys = keys.filter(binding => binding.key !== key)
+      // This wont work since it removes the reference to the original `keys` object.
+      const alreadyBound = keys.find(binding => binding.key === key)
+      if (alreadyBound) {
+        alreadyBound.command = commandName || command
+        alreadyBound.when = when
+        return
+      }
+      keys.push({ key, command: commandName || command, when })
+
+      E.message(keys.map(JSON.stringify))
+    })
+
+    E.message(`“${key}”: ${command}`)
+  }
+
   /** Now that we have `context` in-scope, let's alter `commands`
    *  so that it supports having keybindings alongside command definitions.
+   *
+   *  ## Unlike `vscode.commands.registerCommand`, we allow you to redefine already defined commands.
+   * ```
+   * commands.hello = E => E.message("hi")
+   * E.executeCommand('hello') // Echos "hi"
+   *
+   * // Let's redefine the `hello` command!
+   * commands.hello = E => E.message("hi 2")
+   * E.executeCommand('hello') // Echos "hi 2"
+   * ```
    */
   commands = new Proxy(commands, {
     set(obj, prop, value) {
+      if (typeof value === 'function') {
+        obj[prop] = value
+        E.ignoreErrors(_ => E.registerCommand(prop, () => obj[prop](E)))
+      }
       if (typeof value === 'object') {
         let keys = Object.keys(value)
         if (keys.length > 1) {
@@ -152,25 +342,19 @@ function activate(context) {
         }
         let key = keys[0]
         let fun = value[key]
-
-        try {
-          context.subscriptions.push(vscode.commands.registerCommand(prop, () => obj[prop](E)))
-        } catch (e) { }
+        E.ignoreErrors(_ => E.registerCommand(prop, () => obj[prop](E)))
         E.bindKey(key, prop)
-
         obj[prop] = fun
+        return `“ ${key} ” ~ ${prop}`
       } else Reflect.set(...arguments)
     }
   })
 
-  // Let's expose some `E.internal` functions as commands (`cmd+shift+p`)-visibile by this extension.
-  let register = name =>
-    context.subscriptions.push(
-      vscode.commands.registerCommand(`easy-extensibility.${name}`, E.internal[name](commands))
-    )
-  register('evaluateSelection')
-  register('executeRegisteredCommand')
+  // Let's expose some `E.internal` functions as commands (`cmd + shift + p`)-visibile by this extension.
+  E.registerCommand('easy-extensibility.evaluateSelection', E.internal.evaluateSelection(commands))
+  E.registerCommand('easy-extensibility.executeRegisteredCommand', E.internal.executeRegisteredCommand(commands))
 
+  // caching the npm results
   let initialization = () => {
     E.node_path = E.shell(conf("npmCommand") + " root -g")
   }
@@ -179,5 +363,5 @@ function activate(context) {
 
 module.exports = {
   activate,
-  deactivate: () => { }
+  deactivate: () => {}
 }
