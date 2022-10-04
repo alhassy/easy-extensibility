@@ -11,7 +11,7 @@
  * - tldr: Cmd+E to evaluate a selection of code; Cmd+H to run commands from the user's personal pallete.
  *
  *
- * The current implementation treats the user's init file as if it were semi-dynamically-scoped: The `~/init.js` file
+ * The current implementation treats the user's init file as if it were semi-dynamically-scoped: The `~/.init.js` file
  * may mention `E, commands, vscode` with no ceremonial import of any kind!(This is similar to the use of the keyword
  * `this` in object - oriented programming: It's an implicitly introduced argument!)
  *
@@ -19,7 +19,7 @@
  * being shared with the world.)
  *
  * It is encouraged to keep this file under version control, then make a symbolic link;
- * e.g., `ln - s ~/my-cool-repo/init.js  ~/init.js`
+ * e.g., `ln - s ~/my-cool-repo/init.js  ~/.init.js`
  *
  * # A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
  * - In VSCode, press “⌘+k ⌘+1” to fold everything up and get a nice outline view of everything here.
@@ -294,7 +294,7 @@ commands['Save URL from clipboard for later learning/watching/listening'] = asyn
 // ? Make a new file “init.json” with the contents "{}".
 E.withJSON(
   '~/easy-extensibility/init.json',
-  data => (data.README = 'This file contains data for use in my ~/init.js file')
+  data => (data.README = 'This file contains data for use in my ~/.init.js file')
 )
 
 // We can stick our data in there, like this:

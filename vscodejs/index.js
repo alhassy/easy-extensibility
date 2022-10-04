@@ -865,6 +865,7 @@ module.exports = vscode => {
 
   /** Expand user directory
    *  expand "~" to actual path.
+   *  mock python's os.path.expanduser function.
    */
   E.expanduser = ( pathstr ) => {
     if( pathstr.indexOf("~") === 0) {
