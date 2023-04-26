@@ -2,7 +2,7 @@
   "name": "easy-extensibility",
   "displayName": "easy-extensibility",
   "description": "Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "repository": "https://github.com/alhassy/easy-extensibility",
   "icon": "graphics/logo.png",
   "publisher": "alhassy",
@@ -19,6 +19,32 @@
   ],
   "main": "./extension.js",
   "contributes": {
+	"configuration": {
+		"type": "object",
+		"title": "Easy Extensibility",
+		"properties": {
+			"easy-extensibility.rcFile": {
+				"type": "string",
+				"default": "~/.init.js",
+				"description": "Specifies the file path containing the main rc file to use."
+			},
+			"easy-extensibility.npmCommand": {
+				"type": "string",
+				"default": "npm",
+				"description": "Specifies the npm command from nodejs."
+			},
+			"easy-extensibility.dateCommand.unix": {
+				"type": "string",
+				"default": "date +%H:%M:%S",
+				"description": "Specifies the date command on unix like platform."
+			},
+			"easy-extensibility.dateCommand.windows": {
+				"type": "string",
+				"default": "date /T",
+				"description": "Specifies the date command on windows platform."
+			}
+		}
+	},
     "snippets": [
       {
         "language": "javascript",
@@ -39,17 +65,23 @@
       {
         "command": "easy-extensibility.evaluateSelection",
         "mac": "cmd+e",
+		"linux": "ctrl+c e",
+		"win": "ctrl+c e",
         "when": "editorTextFocus"
       },
       {
         "command": "easy-extensibility.evaluateSelection",
         "mac": "shift+cmd+e",
+		"linux": "ctrl+c ctrl+e",
+		"win": "ctrl+c ctrl+e",
         "when": "editorTextFocus",
         "args": 1
       },
       {
         "command": "easy-extensibility.executeRegisteredCommand",
-        "mac": "cmd+h"
+        "mac": "cmd+h",
+		"linux": "ctrl+c g",
+		"win": "ctrl+c g"
       },
       {
         "command": "easy-extensibility.executeRegisteredCommand",

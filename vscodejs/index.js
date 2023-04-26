@@ -23,10 +23,25 @@
  * ```
  * This pattern is captured by `E.withEditor`.
  */
+const path = require("path")
+function getConfigDir() {
+  switch(process.platform) {
+      case "win32":
+          return path.join(process.env.APPDATA, "Code", "User")
+      case "linux":
+          return path.join(process.env.HOME, ".config", "Code", "User")
+      case "osx":
+          return path.join(process.env.HOME, "Library", "Application Support", "Code", "User")
+  }
+}
 
 // VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
-
 module.exports = vscode => {
+  const conf = vscode.workspace.getConfiguration("easy-extensibility").get
+  const isWin = process.platform === "win32"
+  const configdir = getConfigDir()
+  const userDir = isWin ? path.normalize(process.env.USERPROFILE) : process.env.HOME
+
   const E = {}
 
   // Prefix Arguments ================================================================================
@@ -126,8 +141,16 @@ module.exports = vscode => {
   E.get = vscode.workspace.getConfiguration
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.set = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
+  E.internal.set = { path: path.join(configdir, "settings.json") }
 
+  /** Os dependent function */
+  if(isWin) {
+    E.date = () => { return E.shell(conf("dateCommand.windows")) }
+    E.username = () => { return process.env.USERNAME }
+  } else {
+    E.date = () => { return E.shell(conf("dateCommand.unix")) }
+    E.username = () => { return process.env.USER }
+  }
   // bindKey ================================================================================
 
   /** Bind `key` sequence to the given `command` name (only `when` predicate is true).
@@ -169,7 +192,7 @@ module.exports = vscode => {
   }
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.bindKey = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json` }
+  E.internal.bindKey = { path: path.join(configdir, "keybindings.json") }
 
   // Install Extensions ====================================================================================
 
@@ -541,7 +564,7 @@ module.exports = vscode => {
     }
     if (options.name) {
       E.shell(`touch ${options.name}`)
-      await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
+      await vscode.window.showTextDocument(vscode.Uri.file(E.expanduser(options.name)))
       await E.endOfEditor()
       E.insert(options.content)
       if (options.preserveFocus) await E.otherEditor()
@@ -824,7 +847,7 @@ module.exports = vscode => {
    *
    * Returns the path to the (file displayed by the) currently active editor (window pane).
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentFileName() //  ⇒  /Users/musa/init.js
    * ```
@@ -833,12 +856,24 @@ module.exports = vscode => {
 
   /** Get the name of the directory that contains the current file, editor, as a string.
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentDirectory() //  ⇒  /Users/musa/
    * ```
    */
   E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
+
+  /** Expand user directory
+   *  expand "~" to actual path.
+   *  mock python's os.path.expanduser function.
+   */
+  E.expanduser = ( pathstr ) => {
+    if( pathstr.indexOf("~") === 0) {
+      return path.normalize(path.join(userDir, pathstr.slice(2)))
+    } else {
+      return pathstr
+    }
+  }
 
   /** Run a shell command and provide its result as a string; or crash when there's an error.
    * This is intentionally synchronous; i.e., everything stops until the command is done executing.
@@ -1084,7 +1119,7 @@ module.exports = vscode => {
    * E.findFile('Users/musa/init.js')
    *
    * // Using a relative path
-   * E.findFile('~/init.js')
+   * E.findFile('~/.init.js')
    * ```
    *
    * ### Implementation Notes
@@ -1092,7 +1127,7 @@ module.exports = vscode => {
    * *only* within the current workspace.
    */
   E.findFile = (path, otherwise = _ => E.shell(`touch ${path}`)) =>
-    vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME))).catch(otherwise)
+    vscode.window.showTextDocument(vscode.Uri.file(E.expanduser(path))).catch(otherwise)
 
   /** Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.
    * #### Examples
@@ -1101,14 +1136,14 @@ module.exports = vscode => {
    * E.readFile('Users/musa/init.js').then(x => E.message(x))
    *
    * // Using a relative path
-   * E.readFile('~/init.js').then(E.message)
+   * E.readFile('~/.init.js').then(E.message)
    *
    * // Evaluating file contents; dangerous. Useful for dynamically-scoped programming.
-   * E.readFile('~/init.js').then(eval)
+   * E.readFile('~/.init.js').then(eval)
    * ```
    */
   E.readFile = path => ({
-    then: f => require('fs').readFile(path.replace(/~/g, process.env.HOME), 'utf8', (err, data) => f(data))
+    then: f => require('fs').readFile(E.expanduser(path), 'utf8', (err, data) => f(data))
   })
 
   // ================================================================================
@@ -1296,8 +1331,8 @@ module.exports = vscode => {
     // as such, we ignore all leading '*' on new lines.
     text = text.replace(/(\n|^)\s*\*/g, '$1')
 
-    E.internal.require = { NODE_PATH: E.shell('npm root -g') }
-    let now = E.shell('date +%H:%M:%S')
+    E.internal.require = { NODE_PATH: E.node_path }
+    let now = E.date()
 
     E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
 

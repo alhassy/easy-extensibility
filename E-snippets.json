@@ -208,12 +208,12 @@
   " Get the name of the current file, editor, as a string.": {
     "prefix": "E.currentFileName ",
     "body": "E.currentFileName(${1:})$0",
-    "description": " Get the name of the current file, editor, as a string.\n *\n * For example, within my `~/init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentFileName() //  ⇒  /Users/musa/init.js\n * ```\n "
+    "description": " Get the name of the current file, editor, as a string.\n *\n * For example, within my `~/.init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentFileName() //  ⇒  /Users/musa/init.js\n * ```\n "
   },
   " Get the name of the directory that contains the current file, editor, as a string.": {
     "prefix": "E.currentDirectory ",
     "body": "E.currentDirectory(${1:})$0",
-    "description": " Get the name of the directory that contains the current file, editor, as a string.\n *\n * For example, within my `~/init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentDirectory() //  ⇒  /Users/musa/\n * ```\n "
+    "description": " Get the name of the directory that contains the current file, editor, as a string.\n *\n * For example, within my `~/.init.js` pressing `cmd+e` on the following:\n * ```\n * E.currentDirectory() //  ⇒  /Users/musa/\n * ```\n "
   },
   " Run a shell command and get the result as promised object of `{stdout: string, stderr: string}`.": {
     "prefix": "E.shell ",
@@ -258,6 +258,6 @@
   " Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.": {
     "prefix": "E.readFile ",
     "body": "E.readFile(path)$0",
-    "description": " Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.\n * #### Examples\n * ```\n * // Using an absolute path\n * E.readFile('Users/musa/init.js').then(x => E.message(x))\n *\n * // Using a relative path\n * E.readFile('~/init.js').then(E.message)\n *\n * // Evaluating file contents; dangerous. Useful for dynamically-scoped programming.\n * E.readFile('~/init.js').then(eval)\n * ```\n "
+    "description": " Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.\n * #### Examples\n * ```\n * // Using an absolute path\n * E.readFile('Users/musa/init.js').then(x => E.message(x))\n *\n * // Using a relative path\n * E.readFile('~/.init.js').then(E.message)\n *\n * // Evaluating file contents; dangerous. Useful for dynamically-scoped programming.\n * E.readFile('~/.init.js').then(eval)\n * ```\n "
   }
 }

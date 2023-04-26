@@ -11,7 +11,7 @@
  * - tldr: Cmd+E to evaluate a selection of code; Cmd+H to run commands from the user's personal pallete.
  *
  *
- * The current implementation treats the user's init file as if it were semi-dynamically-scoped: The `~/init.js` file
+ * The current implementation treats the user's init file as if it were semi-dynamically-scoped: The `~/.init.js` file
  * may mention `E, commands, vscode` with no ceremonial import of any kind!(This is similar to the use of the keyword
  * `this` in object - oriented programming: It's an implicitly introduced argument!)
  *
@@ -19,7 +19,7 @@
  * being shared with the world.)
  *
  * It is encouraged to keep this file under version control, then make a symbolic link;
- * e.g., `ln - s ~/my-cool-repo/init.js  ~/init.js`
+ * e.g., `ln - s ~/my-cool-repo/init.js  ~/.init.js`
  *
  * # A program is a literate work, written by a human & read by a human ---incidentally also by a machine.
  * - In VSCode, press “⌘+k ⌘+1” to fold everything up and get a nice outline view of everything here.
@@ -27,10 +27,23 @@
 
  //===================================================== Simple Starters ================================================
 
- /** 🚀 Whenever we open VSCode, let's see a motivating message! 💪
- *
- */
-let welcome = `Welcome ${process.env.USER}! Today is ${E.shell('date')}!`
+// If you haven't already, invoke `cmd+h tutorial` to read the tutorial first!
+
+// The current implementation treats the user's init file as if it were semi-dynamically-scoped:
+// The `~/.init.js` file may mention `E, commands, vscode` with no ceremonial import of any kind!
+// (This is similar to the use of the keyword `this` in object-oriented programming:
+//  It's an implicitly introduced argument!)
+
+// Below are sample fragments to help you get started; all the best!
+// (More honestly, this is Musa's personal init.js being shared with the world.)
+
+// It is encouraged to keep this file under version control, then make a symbolic link;
+// e.g.,   ln  -s  ~/my-cool-repo/init.js  ~/.init.js
+
+// ==================================================================================
+// ========= 🚀 Whenever we open VSCode, let's see a motivating message! 💪 ==========
+// ==================================================================================
+let welcome = `Welcome ${E.username()} on ${process.platform}! Today is ${E.date()}!`
 let button = `A beautiful day to be alive 😃💐😁`
 E.message(welcome, button)
 
@@ -281,7 +294,7 @@ commands['Save URL from clipboard for later learning/watching/listening'] = asyn
 // ? Make a new file “init.json” with the contents "{}".
 E.withJSON(
   '~/easy-extensibility/init.json',
-  data => (data.README = 'This file contains data for use in my ~/init.js file')
+  data => (data.README = 'This file contains data for use in my ~/.init.js file')
 )
 
 // We can stick our data in there, like this:
@@ -295,15 +308,9 @@ E.withJSON('~/easy-extensibility/init.json', data => {
   }
 })
 
-// Then, we do:
-commands["Youtube ~ Background audio while I'm working"] = E =>
-  E.withJSON('~/easy-extensibility/init.json', async data => {
-    let videos = data['Youtube / Background']
-    const url = await E.readInput('What do you want to listen to?', videos)
-    E.browseURL(url)
-  })
-//
-// ! TODO: Relocate this and the above block to tutorial.js, on E.withJSON.
+// ==================================================================================
+// =============== Running arbitrary CLI programs on the current file ===============
+// ==================================================================================
 
 /** Running arbitrary CLI programs on the current file
  *
@@ -534,14 +541,22 @@ commands['Define word'] = {
 
 //======================================================== Terminals ===================================================
 
-/** You can press Ctrl+` to go to a terminal, then Ctrl+1 to go to the first editor.
- * (Or Ctrl+2 or any number to go to that editor)
+/** Create a new editor, setting its language, initial content, and file name. Possibly open an existing file.
  *
- * However, I'd like Ctrl+` to behave as follows:
- * 1. If the terminal is not open, open it for me.
- * 2. If the bottom pane is not open, open it for me.
- * 3. If the bottom pane is open, shift focus to my terminal.
- * 4. If I'm in my terminal, then hide the bottom pane and return focus to the editor.
+ * @return A promise that opens a new {@link TextEditor editor}.
+ * @param options A configuration of possible options for thew new file, including:
+ *   - When `content` is `null`, you get the classic VSCode "Select a language, or start typing..." transient placeholder text.
+ *      - If there already exists a file with the given `name`, then we open it and *append* the given content to it.
+ *   - `column` A view column in which the new editor should be shown. Defaulting to 0.
+ *   - `preserveFocus` When `true` the editor will not take focus.
+ *
+ * - If `name` is provided, then an actual file is created ---this is to avoid VSCode's annoying "Save" dialog boxes!
+ *   - If there's already a file named by `name`, then that file is opened instead.
+ *
+ * ### Examples
+ * ```
+ * // Create a new empty editor, with the usual "Select a language, or start typing..." transient placeholder text.
+ * await E.newEditor()
  *
  * Ctrl + Shift + ` to create a new terminal.
  */
@@ -680,3 +695,18 @@ E.bindKey('ctrl+backspace', 'extension.hungryDelete')
 */
 
 // ? Note that Cmd+/ toggles comments, works nicely with selections.
+
+// an example of transforming text.
+function quoteSelection(quote = "\"", sep = " ") {
+  let editor = vscode.window.activeTextEditor
+  const document = editor.document
+  const selection = editor.selection
+  const replacement = document.getText(selection).split(" ").map(str => quote+str+quote).join(sep)
+  editor.edit(editBuilder => editBuilder.replace(selection, replacement))
+}
+
+commands["Quote selection"] = E => quoteSelection()
+
+commands["Quote selection with \" and separate with \",\""] = E => quoteSelection("\"", ", ")
+
+commands["Quote selection with ' and separate with \",\""] = E => quoteSelection("'", ", ")
