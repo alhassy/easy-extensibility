@@ -1,33 +1,30 @@
-/** A high-level VSCode Extension API ---that is also user-friendly.
- *
- * The default `vscode` API is too low-level. Users are forced to worry about windows
- * and editor objects for the sake of inserting some text or retriving selected regions of text.
- *
- * See also: https://alhassy.com/vscode-is-itself-a-javascript-repl
- *
- * ### Example Usage
- * ```
- * // In your extension.js you would have:
- * const vscode = require('vscode')
- * const E = require('vscodejs')(vscode)
- * E.message("Hello, world!")
- * ```
- *
- * ### Active Editors
- * Many methods attached to this API require an active editor. It's up to the user to ensure this
- * requirement is meet; e.g., depending on the context, one may need to perform a check along the lines of:
- * ```
- * let editor = vscode.window.activeTextEditor;
- * if (!editor) return; // No editor on which to operate, so exit.
- * ... // Otherwise, use `E.XYZ` methods here.
- * ```
- * This pattern is captured by `E.withEditor`.
- */
+import * as path from "path";
+import * as vscode from "vscode";
+import * as  crypto from "crypto";
+import { exec } from "child_process";
+import { promisify } from "util";
 
-// VSCodeJS is a language whose runtime is easy-extensibility, a VSCode extension.
+function getConfigDir() {
+  switch (process.platform) {
+    case "win32":
+      return path.join(process.env.APPDATA || "", "Code", "User")
+    case "linux":
+      return path.join(process.env.HOME || "", ".config", "Code", "User")
+    case "darwin":
+      return path.join(process.env.HOME || "", "Library", "Application Support", "Code", "User")
+    default:
+      return ""
+  }
+}
 
-module.exports = vscode => {
-  const E = {}
+// Export a default function that takes the VSCode API as parameter.
+export default function (vscode: typeof import("vscode")): any {
+  const conf = vscode.workspace.getConfiguration("easy-extensibility").get;
+  const isWin = process.platform === "win32";
+  const configdir = getConfigDir();
+  const userDir = isWin ? path.normalize(process.env.USERPROFILE || "") : (process.env.HOME || "");
+
+  const E: any = {};
 
   // Prefix Arguments ================================================================================
 
@@ -69,17 +66,15 @@ module.exports = vscode => {
    * - `cmd+e` shows the result of evaluating a selection, or the current line;
    * - `shift+cmd+e` inserts the result on a newline.
    */
-  E.currentPrefixArgument = undefined
+  E.currentPrefixArgument = undefined;
 
-  // Internal Configurations ================================================================================
-
-  /** Configurations of the `E` API; e.g., how evaluated text is shown is handled with `E.internal.echoFunction`. */
-  E.internal = {}
+  // Internal Configurations =======================================================================
+  E.internal = {};
   /** This function is called to decide how should evaluated text be shown by the `easy-extensibiliy`'s `cmd+E` keybinding.
    * - The default is to show a `E.message` of a given value `x` along with its type.
    * - Other useful functions include `E.overlay` or `E.insert`.
    */
-  E.internal.echoFunction = (x, typ = typeof x) => E.message(`${E.string(x)} ~ ${typ}`)
+  E.internal.echoFunction = (x: any, typ: string = typeof x) => E.message(`${E.string(x)} ~ ${typ}`);
 
   // set ================================================================================
 
@@ -108,7 +103,7 @@ module.exports = vscode => {
    * ### Useful Reading
    * https://www.roboleary.net/2021/11/06/vscode-you-dont-need-that-extension2.html
    */
-  E.set = (key, value) => {
+  E.set = (key: string, value: any) => {
     let settings = JSON.parse(require('fs').readFileSync(E.internal.set.path))
     settings[key] = value
     require('fs').writeFileSync(E.internal.set.path, JSON.stringify(settings, null, 2))
@@ -123,53 +118,66 @@ module.exports = vscode => {
    * const usersEntireConfig = E.get()
    * ```
    */
-  E.get = vscode.workspace.getConfiguration
+  E.get = vscode.workspace.getConfiguration;
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.set = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/settings.json` }
+  E.internal.set = { path: path.join(configdir, "settings.json") };
 
-  // bindKey ================================================================================
-
+  /** Os dependent function */
+  if (isWin) {
+    E.date = () => { return E.shell(conf("dateCommand.windows")) }
+    E.username = () => { return process.env.USERNAME }
+  } else {
+    E.date = () => { return E.shell(conf("dateCommand.unix")) }
+    E.username = () => { return process.env.USER }
+  }
   /** Bind `key` sequence to the given `command` name (only `when` predicate is true).
-   *
-   * An excellent introduction to customising VSCode keybindings and why you would even
-   * want to add new keybindings can be found at:
-   * https://www.roboleary.net/2022/02/28/vscode-keyboard-fu-custom-keyboard-shortcuts.html
-   * - See also this Keybindings Cheat Sheet: https://code.visualstudio.com/shortcuts/keyboard-shortcuts-macos.pdf
-   *
-   * ### Example Use
-   * ```
-   * // Press Cmd+m to select current word, then again to select current expression, then again for current line/scope.
-   * // Using "r" for ever-expanding-"R"egion
-   * E.bindKey("cmd+r", "editor.action.smartSelect.expand")
-   * ```
-   *
-   * ### How to find out what command is bound to a specific key?
-   *
-   *   `Cmd+Shift+P  Default Keyboard Shortcuts Cmd+P @`Now-enter-your-key-sequence
-   *
-   * ### How to remove a key binding from an action? E.g. Remove `Cmd+Shift+K` from `Delete Lines`.
-   *   ```
-   *    E.bindKey("cmd+shift+k", undefined)
-   *    ```
-   */
-  E.bindKey = (key, command, when = 'editorTextFocus') => {
+     *
+     * An excellent introduction to customising VSCode keybindings and why you would even
+     * want to add new keybindings can be found at:
+     * https://www.roboleary.net/2022/02/28/vscode-keyboard-fu-custom-keyboard-shortcuts.html
+     * - See also this Keybindings Cheat Sheet: https://code.visualstudio.com/shortcuts/keyboard-shortcuts-macos.pdf
+     *
+     * ### Example Use
+     * ```
+     * // Press Cmd+m to select current word, then again to select current expression, then again for current line/scope.
+     * // Using "r" for ever-expanding-"R"egion
+     * E.bindKey("cmd+r", "editor.action.smartSelect.expand")
+     * ```
+     *
+     * ### How to find out what command is bound to a specific key?
+     *
+     *   `Cmd+Shift+P  Default Keyboard Shortcuts Cmd+P @`Now-enter-your-key-sequence
+     *
+     * ### How to remove a key binding from an action? E.g. Remove `Cmd+Shift+K` from `Delete Lines`.
+     *   ```
+     *    E.bindKey("cmd+shift+k", undefined)
+     *    ```
+     */
+  interface KeyBinding {
+    key: string;
+    command: string | undefined;
+    when: string;
+  }
+
+  E.bindKey = (key: string, command: string | undefined, when: string = 'editorTextFocus') => {
     // ? Note: We likely want to parse using `hjson` instead!
     // Remove starting comment
-    let keys = require('fs')
-      .readFileSync(E.internal.bindKey.path)
-      .toString()
-      .replace('// Place your key bindings in this file to override the defaults', '')
-    keys = JSON.parse(keys)
+    let keys: KeyBinding[] = JSON.parse(
+      require('fs')
+        .readFileSync(E.internal.bindKey.path)
+        .toString()
+        .replace('// Place your key bindings in this file to override the defaults', '')
+    )
     // Override any existing binding for the given key.
-    keys = keys.filter(binding => binding.key !== key)
+    keys = keys.filter((binding: KeyBinding) => binding.key !== key)
     keys.push({ key, command, when })
     require('fs').writeFileSync(E.internal.bindKey.path, JSON.stringify(keys, null, 2))
     return { key, command, when }
   }
 
   /** The path used by `E.set` to find the user's `settings.json` file. */
-  E.internal.bindKey = { path: `${process.env.HOME}/Library/Application\ Support/Code/User/keybindings.json` }
+  E.internal.bindKey = { path: path.join(configdir, "keybindings.json") }
 
   // Install Extensions ====================================================================================
 
@@ -191,8 +199,12 @@ module.exports = vscode => {
    * ### See also: Speed and Disabiling Builtin Extensions
    * https://www.reddit.com/r/vscode/comments/ras74y/do_disabled_extensions_too_make_vscode_slow/
    */
-  E.installExtension = ext => {
-    if (!ext.startsWith('vscode')) return E.shell(`code --install-extension ${ext}`)
+  interface ExtensionId {
+    toString(): string;
+  }
+
+  E.installExtension = (ext: ExtensionId | string): string | undefined => {
+    if (!ext.toString().startsWith('vscode')) return E.shell(`code --install-extension ${ext}`);
   }
 
   // String, Message, Error ================================================================================
@@ -210,65 +222,73 @@ module.exports = vscode => {
    * E.string(f) // => '() => 1'; ie the definition of `f`
    * ```
    */
-  E.string = x => {
+  interface StringifiableObject {
+    [key: string]: any;
+  }
+
+  interface Stringifier {
+    (x: any): string;
+  }
+
+  E.string = (x: any): string => {
     if (typeof x === 'string') return x
     if (typeof x === 'function') return x.toString()
     if (Array.isArray(x)) return JSON.stringify(x)
     if (typeof x === 'object')
-      return `{${Object.keys(x)
-        .map(k => `${k}: ${JSON.stringify(x[k]) || `[${(typeof x[k]).toUpperCase()}]`}`)
+      return `{${Object.keys(x as StringifiableObject)
+        .map((k: string): string => `${k}: ${JSON.stringify((x as StringifiableObject)[k]) || `[${(typeof (x as StringifiableObject)[k]).toUpperCase()}]`}`)
         .join(', ')}}`
     return `${x}`
   }
 
   /** Show JavaScript item `obj` in a VSCode information notification; `obj` is ensured to be a `E.string`.
-   *
-   * Optionally, `buttons` is an array of strings that are used as buttons; the result of the `E.message` is a thennable
-   * that refers to the user's button click, if any.
-   *
-   * For a smooth transition to `Easy-Extensibility`, the `Cmd+E` keybinding
-   * makes `console.log(...args)` output a string via `E.message`.
-   * Likewise, `console.error` and `console.warn` are output via `E.error` and
-   * `E.warning`.
-   *
-   * #### Examples
-   * ```
-   * // Common usage
-   * E.message("Hello, world!")
-   *
-   * // Usage with 2 buttons
-   * E.message("Are you doing well?", "Super duper", "No, not really")
-   * .then(response => response == "Super duper" ? E.message("Yay 😊") : E.error("I'm here for you 🫂"))
-   * ```
-   * ### See also
-   * `E.warning`, `E.error`, `E.overlay`, `E.insert`.
-   */
-  E.message = (obj, ...buttons) => vscode.window.showInformationMessage(E.string(obj), ...buttons)
+    *
+    * Optionally, `buttons` is an array of strings that are used as buttons; the result of the `E.message` is a thennable
+    * that refers to the user's button click, if any.
+    *
+    * For a smooth transition to `Easy-Extensibility`, the `Cmd+E` keybinding
+    * makes `console.log(...args)` output a string via `E.message`.
+    * Likewise, `console.error` and `console.warn` are output via `E.error` and
+    * `E.warning`.
+    *
+    * #### Examples
+    * ```
+    * // Common usage
+    * E.message("Hello, world!")
+    *
+    * // Usage with 2 buttons
+    * E.message("Are you doing well?", "Super duper", "No, not really")
+    * .then(response => response == "Super duper" ? E.message("Yay 😊") : E.error("I'm here for you 🫂"))
+    * ```
+    * ### See also
+    * `E.warning`, `E.error`, `E.overlay`, `E.insert`.
+    */
+  E.message = (obj: any, ...buttons: string[]) => vscode.window.showInformationMessage(E.string(obj), ...buttons);
 
   /** Show JavaScript item `obj` in a VSCode warning notification; `obj` is ensured to be a `E.string`.
-   *  - See the documentation for `E.message` regarding similar example uses.
-   */
-  E.warning = (obj, ...buttons) => vscode.window.showWarningMessage(E.string(obj), ...buttons)
+     *  - See the documentation for `E.message` regarding similar example uses.
+     */
+  E.warning = (obj: any, ...buttons: string[]) => vscode.window.showWarningMessage(E.string(obj), ...buttons);
 
   /** Show JavaScript item `obj` in a VSCode error notification; `obj` is ensured to be a `E.string`.
-   *  - See the documentation for `E.message` regarding similar example uses.
-   */
-  E.error = (obj, ...buttons) => vscode.window.showErrorMessage(E.string(obj), ...buttons)
+    *  - See the documentation for `E.message` regarding similar example uses.
+    */
+  E.error = (obj: any, ...buttons: string[]) => vscode.window.showErrorMessage(E.string(obj), ...buttons);
 
-  // Overlays ================================================================================
+  // Overlays =======================================================================================
   E.overlayType = vscode.window.createTextEditorDecorationType({
     after: {
       margin: '0 0 0 0.5rem'
     },
     dark: { after: { border: '0.5px solid #808080' } },
     light: { after: { border: '0.5px solid #c5c5c5' } }
-  })
+  });
 
   // Hide overlays on keyboard movement; otherwise the overlay moves too
   vscode.window.onDidChangeTextEditorSelection(event => {
-    let { Command, Keyboard } = vscode.TextEditorSelectionChangeKind
-    if ([Command, Keyboard].includes(event.kind)) E.withEditor(ed => ed.setDecorations(E.overlayType, []))
-  })
+    let { Command, Keyboard } = vscode.TextEditorSelectionChangeKind;
+    if (event.kind && [Command, Keyboard].includes(event.kind)) E.withEditor((ed: vscode.TextEditor) => ed.setDecorations(E.overlayType, []));
+  });
 
   /** Show JavaScript item `obj` in an overlay at the end of the line; `obj` is ensured to be a `E.string`.
    * Return the resulting overlay decoration config.
@@ -290,118 +310,125 @@ module.exports = vscode => {
    * E.overlay("World!")
    * ```
    */
-  E.overlay = obj => {
-    const editor = vscode.window.activeTextEditor
-    if (!editor) return
-    const decoration = {
-      range: editor.selection,
-      renderOptions: { after: { contentText: E.string(obj) } }
+  interface DecorationConfig {
+    range: vscode.Selection;
+    renderOptions: {
+      after: {
+        contentText: string;
+      }
     }
-    editor.setDecorations(E.overlayType, [decoration])
-    return decoration // : DecorationOptions
   }
 
-  // Decorations ================================================================================
+  E.overlay = (obj: any): DecorationConfig | undefined => {
+    const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+    if (!editor) return;
+    const decoration: DecorationConfig = {
+      range: editor.selection,
+      renderOptions: { after: { contentText: E.string(obj) } }
+    };
+    editor.setDecorations(E.overlayType, [decoration]);
+    return decoration;
+  }
+
+  // Decorations ====================================================================================
 
   /** Escapes a given string for use in a regular expression */
-  E.rxEscape = literal => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  // Implementation note: We replace any regexp operations with a \\ in-front of them.
-  // $& means the whole matched string.
+  E.rxEscape = (literal: string) => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   /** Collection of style types defined by `E.decorateRegexp`.
-   *
-   * Internal meta-data required to make E.decorateRegexp work; i.e., to make determinstic.
-   */
-  E.internal.decorateRegexp = { styles: {} }
+     *
+     * Internal meta-data required to make E.decorateRegexp work; i.e., to make determinstic.
+     */
+  E.internal.decorateRegexp = { styles: {} };
 
   /** Apply `style` to every instance of `regexp` in the currently active editor.
-   *
-   * ### Useful Resources
-   * - https://eloquentjavascript.net/09_regexp.html#:~:text=A%20number%20of%20common%20character%20groups
-   * - The VSCode `Text Regexp` extension, to try out your regexps as you write them!
-   * - The function `E.rxEscape` for forming regexps from string literals.
-   *
-   * ### Arguments
-   * - `rx: RegExp | string`
-   * - `disable: boolean`
-   * - `style: object` with possible keys being a small set of CSS properties ---but in JS `camelCase` rather than in CSS `kebab-case`.
-   *    - CSS styling properties that will be applied to text enclosed by a decoration:
-   *      - `backgroundColor?: string` Background color of the decoration.
-   *      - `outline?: string` ---for more fine-grained control, there are also the CSS properties
-   *         - `outlineColor?, outlineStyle?, outlineWidth?: string`
-   *      - `border?: string` ---for more fine-grained control, there are also the CSS properties
-   *         - `borderColor?, borderRadius?, borderSpacing?, borderStyle?, borderWidth?: string`
-   *      - Sadly there is no supported `fontFamily` option.
-   *      - `textDecoration?: string` The text-decoration shorthand CSS property sets the appearance of decorative lines on text.
-   *          (It is a shorthand for CSS text-decoration-line, text-decoration-color, text-decoration-style, and the newer text-decoration-thickness property.)
-   *          - Line values `underline, overline, linethrough` and any combinations thereof.
-   *          - Style values `solid, double, dotted, dashed, wavy`
-   *          - Color property sets the color of decorations added to text by text-decoration-line.
-   *          - Thickness property sets the stroke thickness of the decoration line that is used on text in an element, such as a line-through, underline, or overline.
-   *      - `cursor?: string`: How should the cursor look? Values are documented at https://www.w3schools.com/cssref/pr_class_cursor.asp
-   *      - `color?: string`
-   *      - `letterSpacing?: string` Increases or decreases the space between characters in a text. E.g., `"10px"`.
-   *      - `gutterIconPath?: string | Uri` An **absolute path** or an URI to an image to be rendered in the gutter.
-   *      - `gutterIconSize?: string` Specifies the size of the gutter icon.
-   *         Available values are 'auto', 'contain', 'cover' and any percentage value.
-   *         For further information: https://msdn.microsoft.com/en-us/library/jj127316(v=vs.85).aspx
-   *      - `overviewRulerColor?: string | ThemeColor` The color of the decoration in the overview ruler. Use rgba() and define transparent colors to play well with other decorations.
-   *
-   *      - `before?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted before the decorated text.
-   *      - `after?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted after the decorated text.
-   *         E.g., `{ after: { border: '0.5px solid #808080' } }`
-   *         - See also the definition of `E.overlay`.
-   *
-   * ### Examples
-   * Note: We use a Unicode star, "✶/", in the examples below since an ASCII star, Shift+8, terminates JSDocs.
-   * ```
-   * // Colour all words "hello" in pink; including: hello HeLlO
-   * E.decorateRegexp(/hello/i, { backgroundColor: "pink" })
-   *
-   * // Disable such decorations
-   * E.decorateRegexp(/hello/i, { backgroundColor: "pink" }, {disable: true})
-   *
-   * // Use a string literal, without worrying about escaping regular expression operators.
-   * E.decorateRegexp(`\\ Did you know 1 + 1 = 2?`,  { backgroundColor: "pink", color: "cyan" })
-   *
-   * // Decorate all words that start with 'B' and end with 'E'; ignoring case
-   * E.decorateRegexp(/B\w*E/i, { backgroundColor: "pink" })
-   *
-   * // All lines mentioning "G" are coloured green, from the "G" to the end of the line.
-   * E.decorateRegexp(/G.✶/, { color: "#98C379" })
-   * // Colour all lines that start with "G" green, and those with "B" to be blue!
-   * E.decorateRegexp(/\nG.✶/, { color: "#98C379" });
-   * E.decorateRegexp(/\nB.✶/, { color: "blue" });
-   *
-   * // [Better Comments!] Colour all lines that start with "// M" maroon, until end of line.
-   * E.decorateRegexp(new RegExp(`\n${E.rxEscape('//')} ✶M.✶`), {color: "maroon"})
-   * // Example usage is below:
-   * //   M    hi there amigo !
-   *
-   * // Add a blue frame around all occurrences of the word "console.log"
-   * // I use this as a visual aid when doing print-debugging so as to remember to remove these prints when I'm done.
-   * E.decorateRegexp("console.log", {outline: "thick double #32a1ce"})
-   *
-   * // Increase spacing of all "Neato" in the current editor, and encircle it in a purple curved box.
-   * E.decorateRegexp("Neato", {outline: "2px ridge rgba(170, 50, 220, .6)", borderRadius: "1rem", letterSpacing: "2px"})
-   *
-   * // A more involved example: Show "Hiya" as if it were a pink button, with a border, underlined in blue cyan, and being green bold
-   * E.decorateRegexp("Hiya", {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" }, {disable: true})
-   *
-   * // Phrases starting with "#:" are emphasised with large wavy lines, to indicate "Look Here!"
-   * E.decorateRegexp(/#:.✶/, {fontStyle: "cursive", textDecoration: "underline overline wavy blue 3px"})
-   *
-   * // Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline.
-   * // I like to use this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.
-   * // I like the "#"-syntax since it's reminiscent of Markdown section markers.
-   * E.decorateRegexp(/#.* #/, {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" })
-   * ```
-   *
-   * ### See also
-   * - `E.rxEscape` This escapes regular expression operators in strings.
-   * - https://alhassy.com/vscode-beautifully-marking-up-comments
-   */
-  E.decorateRegexp = (rx, style = { backgroundColor: 'green' }, options = { disable: false }) => {
+     *
+     * ### Useful Resources
+     * - https://eloquentjavascript.net/09_regexp.html#:~:text=A%20number%20of%20common%20character%20groups
+     * - The VSCode `Text Regexp` extension, to try out your regexps as you write them!
+     * - The function `E.rxEscape` for forming regexps from string literals.
+     *
+     * ### Arguments
+     * - `rx: RegExp | string`
+     * - `disable: boolean`
+     * - `style: object` with possible keys being a small set of CSS properties ---but in JS `camelCase` rather than in CSS `kebab-case`.
+     *    - CSS styling properties that will be applied to text enclosed by a decoration:
+     *      - `backgroundColor?: string` Background color of the decoration.
+     *      - `outline?: string` ---for more fine-grained control, there are also the CSS properties
+     *         - `outlineColor?, outlineStyle?, outlineWidth?: string`
+     *      - `border?: string` ---for more fine-grained control, there are also the CSS properties
+     *         - `borderColor?, borderRadius?, borderSpacing?, borderStyle?, borderWidth?: string`
+     *      - Sadly there is no supported `fontFamily` option.
+     *      - `textDecoration?: string` The text-decoration shorthand CSS property sets the appearance of decorative lines on text.
+     *          (It is a shorthand for CSS text-decoration-line, text-decoration-color, text-decoration-style, and the newer text-decoration-thickness property.)
+     *          - Line values `underline, overline, linethrough` and any combinations thereof.
+     *          - Style values `solid, double, dotted, dashed, wavy`
+     *          - Color property sets the color of decorations added to text by text-decoration-line.
+     *          - Thickness property sets the stroke thickness of the decoration line that is used on text in an element, such as a line-through, underline, or overline.
+     *      - `cursor?: string`: How should the cursor look? Values are documented at https://www.w3schools.com/cssref/pr_class_cursor.asp
+     *      - `color?: string`
+     *      - `letterSpacing?: string` Increases or decreases the space between characters in a text. E.g., `"10px"`.
+     *      - `gutterIconPath?: string | Uri` An **absolute path** or an URI to an image to be rendered in the gutter.
+     *      - `gutterIconSize?: string` Specifies the size of the gutter icon.
+     *         Available values are 'auto', 'contain', 'cover' and any percentage value.
+     *         For further information: https://msdn.microsoft.com/en-us/library/jj127316(v=vs.85).aspx
+     *      - `overviewRulerColor?: string | ThemeColor` The color of the decoration in the overview ruler. Use rgba() and define transparent colors to play well with other decorations.
+     *
+     *      - `before?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted before the decorated text.
+     *      - `after?: ThemableDecorationAttachmentRenderOptions` Defines the rendering options of the attachment that is inserted after the decorated text.
+     *         E.g., `{ after: { border: '0.5px solid #808080' } }`
+     *         - See also the definition of `E.overlay`.
+     *
+     * ### Examples
+     * Note: We use a Unicode star, "✶/", in the examples below since an ASCII star, Shift+8, terminates JSDocs.
+     * ```
+     * // Colour all words "hello" in pink; including: hello HeLlO
+     * E.decorateRegexp(/hello/i, { backgroundColor: "pink" })
+     *
+     * // Disable such decorations
+     * E.decorateRegexp(/hello/i, { backgroundColor: "pink" }, {disable: true})
+     *
+     * // Use a string literal, without worrying about escaping regular expression operators.
+     * E.decorateRegexp(`\\ Did you know 1 + 1 = 2?`,  { backgroundColor: "pink", color: "cyan" })
+     *
+     * // Decorate all words that start with 'B' and end with 'E'; ignoring case
+     * E.decorateRegexp(/B\w*E/i, { backgroundColor: "pink" })
+     *
+     * // All lines mentioning "G" are coloured green, from the "G" to the end of the line.
+     * E.decorateRegexp(/G.✶/, { color: "#98C379" })
+     * // Colour all lines that start with "G" green, and those with "B" to be blue!
+     * E.decorateRegexp(/\nG.✶/, { color: "#98C379" });
+     * E.decorateRegexp(/\nB.✶/, { color: "blue" });
+     *
+     * // [Better Comments!] Colour all lines that start with "// M" maroon, until end of line.
+     * E.decorateRegexp(new RegExp(`\n${E.rxEscape('//')} ✶M.✶`), {color: "maroon"})
+     * // Example usage is below:
+     * //   M    hi there amigo !
+     *
+     * // Add a blue frame around all occurrences of the word "console.log"
+     * // I use this as a visual aid when doing print-debugging so as to remember to remove these prints when I'm done.
+     * E.decorateRegexp("console.log", {outline: "thick double #32a1ce"})
+     *
+     * // Increase spacing of all "Neato" in the current editor, and encircle it in a purple curved box.
+     * E.decorateRegexp("Neato", {outline: "2px ridge rgba(170, 50, 220, .6)", borderRadius: "1rem", letterSpacing: "2px"})
+     *
+     * // A more involved example: Show "Hiya" as if it were a pink button, with a border, underlined in blue cyan, and being green bold
+     * E.decorateRegexp("Hiya", {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" }, {disable: true})
+     *
+     * // Phrases starting with "#:" are emphasised with large wavy lines, to indicate "Look Here!"
+     * E.decorateRegexp(/#:.✶/, {fontStyle: "cursive", textDecoration: "underline overline wavy blue 3px"})
+     *
+     * // Make "# Experimenting #" look like a solid pink button, with thick green text and a blue underline.
+     * // I like to use this to explicitly demarcate what chunk of code is stuff I'm experimenting with and may end-up deleting.
+     * // I like the "#"-syntax since it's reminiscent of Markdown section markers.
+     * E.decorateRegexp(/#.* #/, {border: "solid", borderRadius: "3px", borderWidth: "1px", letterSpacing: "1px", textDecoration: "underline cyan 2px", color: "green", fontWeight: "bold", backgroundColor: "pink" })
+     * ```
+     *
+     * ### See also
+     * - `E.rxEscape` This escapes regular expression operators in strings.
+     * - https://alhassy.com/vscode-beautifully-marking-up-comments
+     */
+  E.decorateRegexp = (rx: string | RegExp, style = { backgroundColor: 'green' }, options = { disable: false }) => {
     let ed = vscode.window.activeTextEditor
     // Ensure input is a regexp with 'g'lobal flag present.
     if (typeof rx === 'string') rx = new RegExp(E.rxEscape(rx))
@@ -416,17 +443,18 @@ module.exports = vscode => {
     // Actually decorate the given regexp according to the given style, then add some hooks.
     doDecorate()
     vscode.window.onDidChangeActiveTextEditor(doDecorate)
-    vscode.workspace.onDidChangeTextDocument(event => doDecorate(vscode.window.activeTextEditor))
+    vscode.workspace.onDidChangeTextDocument(() => doDecorate(vscode.window.activeTextEditor))
 
     return css
 
     function doDecorate(editor = ed) {
+      if (!editor) return
       editor.setDecorations(css, []) //* Remove existing decorations
       if (options.disable) return
       let text = editor.document.getText()
       let match
       let ranges = []
-      while ((match = rx.exec(text))) {
+      while ((match = (rx instanceof RegExp ? rx : new RegExp(rx)).exec(text))) {
         let startPos = editor.document.positionAt(match.index)
         let endPos = editor.document.positionAt(match.index + match[0].length)
         ranges.push({ range: new vscode.Range(startPos, endPos) })
@@ -474,7 +502,7 @@ module.exports = vscode => {
   E.otherEditor = () => E.executeCommand('workbench.action.navigateEditorGroups')
 
   /** Move cursor to the given `line` number and `column` number. */
-  E.gotoLine = (line, column) => {
+  E.gotoLine = (line: number, column: number) => {
     E.startOfEditor()
     E.nextLine(line - 1)
     E.startOfLine()
@@ -494,9 +522,10 @@ module.exports = vscode => {
    *
    * TODO: We might move the cursor to a different editor, so ideally we save the current editor as well and restore it.
    */
-  E.saveExcursion = callback => {
-    let editor = vscode.window.activeTextEditor
-    let position = editor.selection.active
+  E.saveExcursion = (callback: () => void): void => {
+    const editor = vscode.window.activeTextEditor
+    if (!editor) return
+    const position = editor.selection.active
     callback()
     editor.selection = new vscode.Selection(position, position)
   }
@@ -541,13 +570,16 @@ module.exports = vscode => {
     }
     if (options.name) {
       E.shell(`touch ${options.name}`)
-      await vscode.window.showTextDocument(vscode.Uri.file(options.name.replace(/~/g, process.env.HOME)))
+      await vscode.window.showTextDocument(vscode.Uri.file(E.expanduser(options.name)))
       await E.endOfEditor()
       E.insert(options.content)
       if (options.preserveFocus) await E.otherEditor()
       return
     }
-    let document = await vscode.workspace.openTextDocument(options)
+    let document = await vscode.workspace.openTextDocument({
+      language: options.language,
+      content: options.content || ''
+    })
     vscode.window.showTextDocument(document, options.column, options.preserveFocus)
     if (options.preserveFocus) await E.otherEditor()
   }
@@ -563,7 +595,7 @@ module.exports = vscode => {
    * ```
    * Now press `alt+.` a few times and see what you see.
    */
-  E.currentWord = async () => {
+  E.currentWord = async (): Promise<string> => {
     await E.executeCommand('cursorWordStartRightSelect')
     let word = E.selection()
     E.executeCommand('cancelSelection')
@@ -573,9 +605,33 @@ module.exports = vscode => {
   // Inserts & input ================================================================================
 
   /**  Insert text at current cursor position;  `it` is ensured to be a `E.string`. */
-  E.insert = obj => {
-    const editor = vscode.window.activeTextEditor
-    if (editor) editor.edit(editBuilder => editBuilder.insert(editor.selection.active, E.string(obj)))
+  interface TextEditor {
+    edit(callback: (editBuilder: TextEditorEdit) => void): Thenable<boolean>;
+    selection: Selection;
+  }
+
+  interface TextEditorEdit {
+    insert(position: Position, content: string): void;
+  }
+
+  interface Selection {
+    active: Position;
+  }
+
+  interface Position {
+    line: number;
+    character: number;
+  }
+
+  interface InsertFunction {
+    (obj: any): void;
+  }
+
+  E.insert = (obj: any): void => {
+    const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+    if (editor) editor.edit((editBuilder: vscode.TextEditorEdit) =>
+      editBuilder.insert(editor.selection.active, E.string(obj))
+    );
   }
 
   /** Insert a new line and move cursor to start of it. */
@@ -587,8 +643,12 @@ module.exports = vscode => {
   /** Insert string `str` at the given `line` number and `col`umn number.
    * - If the line ends before the specified `col`, then insert the text at the final column (ie end of line).
    */
-  E.insertAt = (line, col, str) =>
-    vscode.window.activeTextEditor.edit(editBuilder => editBuilder.insert(new vscode.Position(line - 1, col), str))
+  E.insertAt = (line: number, col: number, str: string): void => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      editor.edit(editBuilder => editBuilder.insert(new vscode.Position(line - 1, col), str));
+    }
+  }
 
   /** Save all editors. */
   E.saveAll = () => E.executeCommand('workbench.action.files.saveAll')
@@ -599,7 +659,7 @@ module.exports = vscode => {
    * E.findReplace("Hi buddo!", "Hola") // This will alter this exact file, and replace the first phrase with the second!
    * ```
    */
-  E.findReplace = (oldy, newy, file = E.currentFileName()) =>
+  E.findReplace = (oldy: string, newy: string, file: string = E.currentFileName()) =>
     Promise.resolve(E.saveAll()).then(_ => E.shell(`sed -i '' 's/${oldy}/${newy}/g' ${file}`))
 
   /** Read a string, possibly with completion.
@@ -638,24 +698,25 @@ module.exports = vscode => {
    * }).then(E.browseURL)
    * ```
    * */
-  E.readInput = (prompt, choices) => {
-    if (!choices) return vscode.window.showInputBox({ placeHolder: prompt })
-    if (Array.isArray(choices)) return vscode.window.showQuickPick(choices, { placeHolder: prompt })
-    return vscode.window.showQuickPick(Object.keys(choices), { placeHolder: prompt }).then(key => choices[key])
+  E.readInput = async (prompt: string, choices?: string[] | Record<string, any>): Promise<string | undefined> => {
+    if (!choices) return vscode.window.showInputBox({ placeHolder: prompt });
+    if (Array.isArray(choices)) return vscode.window.showQuickPick(choices, { placeHolder: prompt });
+    const key = await vscode.window.showQuickPick(Object.keys(choices as Record<string, any>), { placeHolder: prompt });
+    return key ? (choices as Record<string, any>)[key] : undefined;
   }
 
   // Selections ================================================================================
 
   /** Get the current line number as, well, a number. */
-  E.currentLineNumber = () => vscode.window.activeTextEditor.selection.active.line + 1
+  E.currentLineNumber = () => vscode.window.activeTextEditor?.selection.active.line ? + 1 : 1;
   // Implementation note: Internally, vscode uses zero-indexing and so the number the user sees is one-off from the internal
   // number, so we adjust that with a +1. Note: null + 1  ==  1
 
   /** Get the number of the final line of the current active edtior. */
-  E.lastLineNumber = () => vscode.window.activeTextEditor.document.lineCount
+  E.lastLineNumber = () => vscode.window.activeTextEditor?.document.lineCount
 
   /** Get the contents of line `n` as a string. */
-  E.lineAt = n => vscode.window.activeTextEditor.document.lineAt(Math.max(0, n - 1)).text
+  E.lineAt = (n: number) => vscode.window.activeTextEditor?.document.lineAt(Math.max(0, n - 1)).text
   // Implementation note: Internally, vscode uses zero-indexing and so the number the user sees is one-off from the internal
   // number, so we adjust that with a -1.
 
@@ -669,11 +730,11 @@ module.exports = vscode => {
   E.currentLine = () => E.lineAt(E.currentLineNumber())
 
   /** Get the entire contents of the current editor, as a string. */
-  E.editorContents = () => vscode.window.activeTextEditor.document.getText()
+  E.editorContents = () => vscode.window.activeTextEditor?.document.getText()
 
   /** Erase all contents of an editor, and replace its contents with the given string `replacement`, if any. */
   E.clearEditor = (replacement = '') =>
-    vscode.window.activeTextEditor.edit(editBuilder =>
+    vscode.window.activeTextEditor?.edit(editBuilder =>
       editBuilder.replace(
         new vscode.Range(new vscode.Position(0, 0), new vscode.Position(E.lastLineNumber(), 0)),
         replacement
@@ -683,20 +744,20 @@ module.exports = vscode => {
   /** Get selected region, as string. */
   E.selection = () => {
     let editor = vscode.window.activeTextEditor
-    const document = editor.document
-    const selection = editor.selection
-    return document.getText(selection)
+    const document = editor?.document
+    const selection = editor?.selection
+    return document?.getText(selection)
   }
 
   /** Replaced the selected region with the given string `str`. */
-  E.replaceSelection = str => {
+  E.replaceSelection = (str: string) => {
     let editor = vscode.window.activeTextEditor
-    const selection = editor.selection
-    editor.edit(editBuilder => editBuilder.replace(selection, str))
+    const selection = editor?.selection
+    editor?.edit(editBuilder => { if (selection) editBuilder.replace(selection, str) })
   }
 
   /** Replace the selected text `X` by the result of `f(X)`. */
-  E.replaceSelectionBy = f => E.replaceSelection(f(E.selection()))
+  E.replaceSelectionBy = (f: (text: string) => string) => E.replaceSelection(f(E.selection()))
 
   /** Retrieve current selected region if it contains non-whitespace, otherwise get the entirety of the current line. */
   E.selectionOrEntireLine = () => {
@@ -810,13 +871,17 @@ module.exports = vscode => {
   E.paste = () => Promise.resolve(E.executeCommand('execPaste')).then(E.clipboardRead)
 
   /** Copy the contents of the current line, or a given numeric `line` number. */
-  E.copyLine = (line = E.currentLineNumber()) =>
-    E.saveExcursion(_ => {
-      E.gotoLine(line)
-      E.endOfLineSelect()
-      E.copy()
-      E.paste()
-    })
+  interface CopyLineFunction {
+    (line?: number): void;
+  }
+
+  E.copyLine = ((line: number = E.currentLineNumber()): void =>
+    E.saveExcursion((): void => {
+      E.gotoLine(line);
+      E.endOfLineSelect();
+      E.copy();
+      E.paste();
+    })) as CopyLineFunction;
 
   // currentFileName, shell, browseURL ================================================================================
 
@@ -824,21 +889,33 @@ module.exports = vscode => {
    *
    * Returns the path to the (file displayed by the) currently active editor (window pane).
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentFileName() //  ⇒  /Users/musa/init.js
    * ```
    */
-  E.currentFileName = () => vscode.window.activeTextEditor.document.fileName
+  E.currentFileName = () => vscode.window.activeTextEditor?.document.fileName
 
   /** Get the name of the directory that contains the current file, editor, as a string.
    *
-   * For example, within my `~/init.js` pressing `cmd+e` on the following:
+   * For example, within my `~/.init.js` pressing `cmd+e` on the following:
    * ```
    * E.currentDirectory() //  ⇒  /Users/musa/
    * ```
    */
   E.currentDirectory = () => E.currentFileName().split('/').slice(0, -1).join('/')
+
+  /** Expand user directory
+   *  expand "~" to actual path.
+   *  mock python's os.path.expanduser function.
+   */
+  E.expanduser = (pathstr: string) => {
+    if (pathstr.indexOf("~") === 0) {
+      return path.normalize(path.join(userDir || "", pathstr.slice(2)))
+    } else {
+      return pathstr
+    }
+  }
 
   /** Run a shell command and provide its result as a string; or crash when there's an error.
    * This is intentionally synchronous; i.e., everything stops until the command is done executing.
@@ -872,11 +949,12 @@ module.exports = vscode => {
    * ### See Also
    * `E.asyncShell` runs shell commands asynchronously.
    */
-  E.shell = (command, ignore) => {
+  E.shell = (command: string, ignore: boolean): string => {
     if (!ignore) return require('child_process').execSync(command).toString()?.trim()
 
     console.log(`\n🤖 🧪 This is a DRY RUN, so I haven't done anything but I would have:`)
     console.log(`\t🧪 ${command}`)
+    return "";
   }
 
   /** Run a shell command asynchronously and get the result as promised object of `{stdout: string, stderr: string}`.
@@ -918,11 +996,20 @@ module.exports = vscode => {
    *  }
    * ```
    */
-  E.terminal = (cmd, title = cmd) => {
-    let t = vscode.window.createTerminal(title)
-    t.sendText(cmd)
-    t.show(true) // Ensure terminal is showing, but don't force focus to jump here!
-    return t
+  interface Terminal {
+    sendText(text: string): void;
+    show(preserveFocus?: boolean): void;
+  }
+
+  interface TerminalFunction {
+    (cmd: string, title?: string): Terminal;
+  }
+
+  E.terminal = (cmd: string, title: string = cmd): Terminal => {
+    let t: Terminal = vscode.window.createTerminal(title);
+    t.sendText(cmd);
+    t.show(true); // Ensure terminal is showing, but don't force focus to jump here!
+    return t;
   }
 
   /** Make a new webpanel with the given `title` string, that renders the given `html` string.
@@ -950,8 +1037,15 @@ module.exports = vscode => {
    *
    * Essentially this gives a "logging mechanism" to users.
    */
-  E.webPanel = (title, html) => {
-    vscode.window.createWebviewPanel(null, title).webview.html = html
+  E.webPanel = (title: string, html: string) => {
+    const panel = vscode.window.createWebviewPanel(
+      'easyExtensibilityWebview', // Identifies the type of the webview
+      title, // Title display in UI
+      vscode.ViewColumn.One, // Editor column to show the webview in
+      {} // Webview options
+    )
+    panel.webview.html = html
+    return panel
   }
 
   /** Browse to a given `url` string, using the OS default browser.
@@ -960,9 +1054,9 @@ module.exports = vscode => {
    * E.browseURL("www.icanhazdadjoke.com")
    * ```
    */
-  E.browseURL = url => E.shell(`open ${url.startsWith('http') ? '' : 'http://'}${url}`)
+  E.browseURL = (url: string) => E.shell(`open ${url.startsWith('http') ? '' : 'http://'}${url}`)
 
-  // Toggles ================================================================================
+  // Toggles ========================================================================================
 
   /** Executes the command denoted by the given command identifier.
    *
@@ -993,10 +1087,10 @@ module.exports = vscode => {
    * E.withEditor(e => e.options.lineNumbers = 0)
    * ```
    */
-  E.withEditor = callback => {
-    const editor = vscode.window.activeTextEditor
-    if (!editor) return
-    return callback(editor)
+  E.withEditor = <T>(callback: (editor: vscode.TextEditor) => T): T | undefined => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return undefined;
+    return callback(editor);
   }
 
   /** A toggling mechanism that is more unfirm that the defaults and is larger.
@@ -1015,64 +1109,70 @@ module.exports = vscode => {
    */
   E.toggle = {
     /** Show every key stroke I press in a nice large pane near the middle-bottom of my screen? */
-    screencast: () => E.executeCommand('workbench.action.toggleScreencastMode'),
+    screencast: (): any => E.executeCommand('workbench.action.toggleScreencastMode'),
 
     /** Toggle whether we are in fullscreen mode or not. */
-    fullscreen: () => E.executeCommand('workbench.action.toggleFullScreen'),
+    fullscreen: (): any => E.executeCommand('workbench.action.toggleFullScreen'),
 
     /** Toggle the visibility of the bottom-most panel (with Problems, Output, Terminal, etc). */
-    panel: () => E.executeCommand('workbench.action.togglePanel'),
+    panel: (): any => E.executeCommand('workbench.action.togglePanel'),
 
-    /** Hide all editors; show only panel; useful when want to focus on panel; cmd+j to bring back editors. */
-    editors: () => E.executeCommand('workbench.action.toggleEditorVisibility'),
+    /** Hide all editors; show only panel; useful when wanting to focus on panel; cmd+j to bring back editors. */
+    editors: (): any => E.executeCommand('workbench.action.toggleEditorVisibility'),
 
-    /** Example usage:  `E.toggle.sidebar(true); E.toggle.sidebar()`  where the first moves position, then the second makes it visible. */
-    sideBar: presenceOrPosition =>
+    /** Example usage:  `E.toggle.sidebar(true); E.toggle.sidebar()` where the first moves position, then the second makes it visible. */
+    sideBar: (presenceOrPosition?: boolean): any =>
       E.executeCommand(`workbench.action.toggleSidebar${presenceOrPosition ? 'Position' : 'Visibility'}`),
 
-    /** Show the bottom-most mode-line, which displays things like line-number, branch name, etc? */
-    statusBar: () => E.executeCommand('workbench.action.toggleStatusbarVisibility'),
+    /** Show the bottom-most mode-line, which displays things like line numbers, branch name, etc? */
+    statusBar: (): any => E.executeCommand('workbench.action.toggleStatusbarVisibility'),
 
-    /** Toggle the visibility of the left-most panel; which mentions `Source Control`, `Extensions`, etc. */
-    activityBar: () => E.executeCommand('workbench.action.toggleActivityBarVisibility'),
+    /** Toggle the visibility of the left-most panel; which includes items like `Source Control` and `Extensions`. */
+    activityBar: (): any => E.executeCommand('workbench.action.toggleActivityBarVisibility'),
 
-    // Hide tabs; navigate between tabs via C-x <-/->
-    tabs: () => E.executeCommand('workbench.action.toggleTabsVisibility'),
+    // Hide tabs; navigate between tabs via C-x <-/->.
+    tabs: (): any => E.executeCommand('workbench.action.toggleTabsVisibility'),
 
-    breadcrumbs: () => E.executeCommand('breadcrumbs.toggle'),
+    breadcrumbs: (): any => E.executeCommand('breadcrumbs.toggle'),
 
     /** Either toggle line numbers on or off.
      *
-     * When `n` is provided, it can be one of the following *numeric* values:
+     * When `n` is provided, it can be one of the following numeric values:
      * 0 off; 1 on; 2 relative.
      */
-    lineNumbers: n => E.withEditor(e => (e.options.lineNumbers = n || +!e.options.lineNumbers)),
+    lineNumbers: (n?: number): any =>
+      E.withEditor((e: vscode.TextEditor) => {
+        e.options.lineNumbers = n !== undefined ? n : +!e.options.lineNumbers;
+      }),
 
     /** Either toggle the cursor style between the default thick line and the underline cursor.
      *
-     * When `n` is provided, it can be one of the following *numeric* values:
+     * When `n` is provided, it can be one of the following numeric values:
      * 1 thick line; 2 filled block; 3 underline; 4 thin line; 5 block outline; 6 thin underline.
      */
-    cursorStyle: n => E.withEditor(e => (e.options.cursorStyle = n || e.options.cursorStyle === 1 ? 3 : 1)),
+    cursorStyle: (n?: number): any =>
+      E.withEditor((e: vscode.TextEditor) => {
+        e.options.cursorStyle = n !== undefined ? n : (e.options.cursorStyle === 1 ? 3 : 1);
+      }),
 
-    /** Instead of seeing typos in the `Problems` pane in the bottom-most panel, toggle whether they should be shown inline.
+    /** Toggle whether typos in the `Problems` pane should be shown inline.
      * [This requires the `Error Lens` extension by user `Alexander`.]
      */
-    errorLens: () => E.executeCommand('errorLens.toggleError'),
+    errorLens: (): any => E.executeCommand('errorLens.toggleError'),
 
-    /** Should spelling mistakes be shown inline, along with suggestions?
-     * [This requies the `Code Spell Checker` extension by user `Street Side Software`.]
+    /** Toggle whether spelling mistakes should be shown inline, along with suggestions.
+     * [This requires the `Code Spell Checker` extension by user `Street Side Software`.]
      */
-    spellChecking: () => E.executeCommand('cSpell.toggleEnableSpellChecker'),
+    spellChecking: (): any => E.executeCommand('cSpell.toggleEnableSpellChecker'),
 
-    /** Toggle whether the active editor should occupy the center of the screen; with whitespace on the sides. */
-    centeredLayout: () => E.executeCommand('workbench.action.toggleCenteredLayout'),
+    /** Toggle whether the active editor should occupy the center of the screen, with whitespace on the sides. */
+    centeredLayout: (): any => E.executeCommand('workbench.action.toggleCenteredLayout'),
 
-    /** Toggle whether there is a tiny map showing an overview of the code and your current location in it. */
-    minimap: () => E.executeCommand('editor.action.toggleMinimap'),
+    /** Toggle whether a minimap is displayed that shows an overview of the file. */
+    minimap: (): any => E.executeCommand('editor.action.toggleMinimap'),
 
-    /** Should whitespace be shown as (uneditable) dots? */
-    showWhitespace: () => E.executeCommand('editor.action.toggleRenderWhitespace')
+    /** Toggle the display of whitespace as (uneditable) dots. */
+    showWhitespace: (): any => E.executeCommand('editor.action.toggleRenderWhitespace')
   }
 
   /** Opens a given file `path` string in the current VSCode instance. Returns a thennable.
@@ -1091,8 +1191,8 @@ module.exports = vscode => {
    * Note that there is `vscode.workspace.findFiles` which finds all files matching a given pattern
    * *only* within the current workspace.
    */
-  E.findFile = (path, otherwise = _ => E.shell(`touch ${path}`)) =>
-    vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME))).catch(otherwise)
+  E.findFile = (path: { replace: (arg0: RegExp, arg1: string | undefined) => string; }, otherwise = (_: any) => E.shell(`touch ${path}`)) =>
+    Promise.resolve(vscode.window.showTextDocument(vscode.Uri.file(path.replace(/~/g, process.env.HOME)))).catch(otherwise)
 
   /** Returns a promise to have read the file at the given `path`; either the promise resolves to a string or null.
    * #### Examples
@@ -1107,42 +1207,48 @@ module.exports = vscode => {
    * E.readFile('~/init.js').then(eval)
    * ```
    */
-  E.readFile = path => ({
-    then: f => require('fs').readFile(path.replace(/~/g, process.env.HOME), 'utf8', (err, data) => f(data))
+  E.readFile = (path: string) => ({
+    then: (f: (data: string) => void) => require('fs').readFile(path.replace(/~/g, process.env.HOME as string), 'utf8', (_err: NodeJS.ErrnoException | null, data: string) => f(data))
   })
 
   // ================================================================================
 
   E.internal.log = vscode.window.createOutputChannel('easy-extensibility')
 
-  E.internal.executeRegisteredCommand = commands => async currentPrefixArgument => {
-    E.currentPrefixArgument = currentPrefixArgument
-    let options = { placeHolder: 'Pick a command ' }
+  E.internal.executeRegisteredCommand = (
+    commands: Record<string, (E: any, vscode: typeof import("vscode")) => void>
+  ) => async (currentPrefixArgument: any): Promise<void> => {
+    E.currentPrefixArgument = currentPrefixArgument;
+    const options: vscode.QuickPickOptions = { placeHolder: 'Pick a command ' };
     try {
-      const result = await vscode.window.showQuickPick(Object.keys(commands), options)
+      const result = await vscode.window.showQuickPick(Object.keys(commands), options);
       if (result) {
-        E.message(`Executing “${result}”...`)
-        commands[result](E, vscode)
+        E.message(`Executing “${result}”...`);
+        commands[result](E, vscode);
       }
     } finally {
-      E.currentPrefixArgument = undefined
+      E.currentPrefixArgument = undefined;
     }
-  }
+  };
 
-  E.internal.eval = { anaphora: text => text }
+  E.internal.eval = {
+    anaphora: (text: string): string => text
+  };
 
   E.internal.eval.console = {
     ...global.console,
-    ...{
-      log: (...args) => E.message(args.map(E.string).join(' ')),
-      error: (...args) => E.error(args.map(E.string).join(' ')),
-      warn: (...args) => E.warning(args.map(E.string).join(' ')),
-      assert: (b, msg = '') => (b ? 'Assertion Passed' : E.error(`Assertion failed.${msg}`))
-    }
-  }
+    log: (...args: any[]): void =>
+      E.message(args.map((arg: any) => E.string(arg)).join(" ")),
+    error: (...args: any[]): void =>
+      E.error(args.map((arg: any) => E.string(arg)).join(" ")),
+    warn: (...args: any[]): void =>
+      E.warning(args.map((arg: any) => E.string(arg)).join(" ")),
+    assert: (b: boolean, msg: string = ""): string | void =>
+      b ? "Assertion Passed" : E.error(`Assertion failed.${msg}`)
+  };
 
   // Find-replace, simplest thing?!  Anaphoric! We expose some objects so that the `eval(text)` below will have them in-scope.
-  E.internal.eval.anaphora = text => {
+  E.internal.eval.anaphora = (text: string) => {
     text = text.replace(/console\.log\(/g, 'E.internal.eval.console.log(')
     text = text.replace(/console\.error\(/g, 'E.internal.eval.console.error(')
     text = text.replace(/console\.warn\(/g, 'E.internal.eval.console.warn(')
@@ -1283,121 +1389,131 @@ module.exports = vscode => {
    * - https://2ality.com/2014/01/eval.html
    * - https://2ality.com/2012/07/evaluator-via-eval.html
    */
-  E.internal.evaluateSelection = commands => currentPrefixArgument => {
-    // To evaluate the current selection, we need an active editor.
-    // For the exact dependency, see the implementation of `E.selection`.
-    let editor = vscode.window.activeTextEditor
-    if (!editor) return
+  E.internal.evaluateSelection = (commands: any): ((currentPrefixArgument: any) => void) => {
+    return (currentPrefixArgument: any): void => {
+      // To evaluate the current selection, we need an active editor.
+      // For the exact dependency, see the implementation of `E.selection`.
+      const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+      if (!editor) return;
+      const globalEval = eval;
 
-    let text = E.selectionOrEntireLine()
-    text = E.internal.eval.anaphora(text)
+      let text: string = E.selectionOrEntireLine();
+      text = E.internal.eval.anaphora(text);
 
-    // I'd like to be able to select a JS doc example usage and quickly run that;
-    // as such, we ignore all leading '*' on new lines.
-    text = text.replace(/(\n|^)\s*\*/g, '$1')
+      // I'd like to be able to select a JS doc example usage and quickly run that;
+      // as such, we ignore all leading '*' on new lines.
+      text = text.replace(/(\n|^)\s*\*/g, '$1');
 
-    E.internal.require = { NODE_PATH: E.shell('npm root -g') }
-    let now = E.shell('date +%H:%M:%S')
+      E.internal.require = { NODE_PATH: E.shell('npm root -g') };
+      const now: string = E.shell('date +%H:%M:%S');
 
-    E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`)
+      E.internal.log.append(`\n\n[${now}]<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n`);
 
-    // By default `var left = right` performs a side-effect and so evaluates to `undefined`, but it's more useful
-    // for the user to see the value of `left`, so let's save that for future use below ---if any.
-    // This also works for `async function f (args) {body}`.
-    // Note: We do this before any cloberring rewrites.
-    let echoableLeftSide =
-      (text.match(/^(\s*)var([^=]*)=/) || [])[2] || (text.match(/^(\s|async)*function(\s*)(\w*)/) || [])[3]
+      // By default `var left = right` performs a side-effect and so evaluates to `undefined`, but it's more useful
+      // for the user to see the value of `left`, so let's save that for future use below ---if any.
+      // This also works for `async function f (args) {body}`.
+      // Note: We do this before any cloberring rewrites.
+      const varMatch = text.match(/^(\s*)var([^=]*)=/);
+      const funcMatch = text.match(/^(\s|async)*function(\s*)(\w*)/);
+      const echoableLeftSide: string = (varMatch ? varMatch[2] : '') || (funcMatch ? funcMatch[3] : '');
 
-    if (text.match(/^\s*let/)) {
-      E.internal.log.append(`// “let” clauses declare local variables whose life ends when CMD+E is done;\n`)
-      E.internal.log.append(`// i.e., you wont be able to use this variable in your next CMD+E press.\n`)
-      E.internal.log.append(`// Consider using “var” if you really want a global variable.\n\n`)
-    }
-    if (text.includes('await')) {
-      const maybeEcho = !echoableLeftSide ? '' : `.then(_ => E.internal.echoFunction(${echoableLeftSide}))`
-      text = `(async () => {\n\n${text}\n\n})()${maybeEcho}.catch(e => E.error(\`\${e}\`))`
+      if (text.match(/^\s*let/)) {
+        E.internal.log.append(`// “let” clauses declare local variables whose life ends when CMD+E is done;\n`);
+        E.internal.log.append(`// i.e., you wont be able to use this variable in your next CMD+E press.\n`);
+        E.internal.log.append(`// Consider using “var” if you really want a global variable.\n\n`);
+      }
+      if (text.includes('await')) {
+        const maybeEcho = !echoableLeftSide ? '' : `.then(_ => E.internal.echoFunction(${echoableLeftSide}))`;
+        text = `(async () => {\n\n${text}\n\n})()${maybeEcho}.catch(e => E.error(\`\${e}\`))`;
 
-      if (!text.includes('E.message'))
-        E.internal.log.append('// Async operation encountered; consider using “E.message” to see results.\n')
-
-      let lets = text.match(/(var)\s*({|\[)([^;]*)(}|]) = [^;\n]*/g)
-      // Keep track of RHS expressions; we don't want to evaluate them multiple times!
-      // E.g.,  `var {x, y} = await complexQuery` should evaluate the RHS only once.
-      let identifiers = {} // This names the RHS in the shape `E.internal[someUUID]`
-      let declared = {} // This flags whether the new internal name has been declared already or not. We want one declaration!
-      lets?.forEach(local => {
-        // Replace `...var {x, y} = obj...` with `...uuid = obj;  x = obj.x;  y = obj.y...`
-        let [entireExp, keyword, openBraket, vars, closeBracket, obj] = local.match(/(var)\s*({|\[)(.*)(}|\]) = (.*)/)
-        if (!identifiers[obj]) identifiers[obj] = require('crypto').randomUUID()
-        const declare = obj => {
-          if (declared[obj]) return ''
-          declared[obj] = true
-          return `E.internal['${identifiers[obj]}'] = ${obj}\n`
+        if (!text.includes('E.message')) {
+          E.internal.log.append('// Async operation encountered; consider using “E.message” to see results.\n');
         }
 
-        vars = vars.replace(/\s/g, '').split(',')
-        // [Below is fancy version of:] text = text.replace(local, vars.map(name => `${name} = (${obj}).${name}`).join(';'))
-        const rewriteListDestructure = (name, index) => {
-          const restParam = name.includes('...')
-          const suffix = restParam ? `.slice(${index})` : `[${index}]`
-          if (restParam) name = name.replace('...', '')
-          return `${declare(obj)} ${name} = E.internal['${identifiers[obj]}']${suffix}`
-        }
-        text = text.replace(
-          local,
-          vars
-            .map((name, index) =>
-              openBraket == '{'
-                ? `${declare(obj)} ${name} = E.internal['${identifiers[obj]}'].${name}` // RHS is an object
+        const lets: RegExpMatchArray | null = text.match(/(var)\s*({|\[)([^;]*)(}|]) = [^;\n]*/g);
+        // Keep track of RHS expressions; we don't want to evaluate them multiple times!
+        // E.g.,  `var {x, y} = await complexQuery` should evaluate the RHS only once.
+        const identifiers: { [key: string]: string } = {};
+        const declared: { [key: string]: boolean } = {};
+        lets?.forEach((local: string) => {
+          const localMatch = local.match(/(var)\s*({|\[)(.*)(}|\]) = (.*)/);
+          if (!localMatch) return;
+          const [, keyword, openBracket, vars, closeBracket, obj] = localMatch;
+          if (!identifiers[obj]) {
+            // Require crypto for UUID generation.
+            identifiers[obj] = crypto.randomUUID();
+          }
+          const declare = (objStr: string): string => {
+            if (declared[objStr]) return '';
+            declared[objStr] = true;
+            return `E.internal['${identifiers[objStr]}'] = ${objStr}\n`;
+          };
+
+          let varList: string[] = vars.replace(/\s/g, '').split(',');
+          const rewriteListDestructure = (name: string, index: number): string => {
+            const restParam: boolean = name.includes('...');
+            const suffix: string = restParam ? `.slice(${index})` : `[${index}]`;
+            if (restParam) name = name.replace('...', '');
+            return `${declare(obj)} ${name} = E.internal['${identifiers[obj]}']${suffix}`;
+          };
+
+          const replacement: string = varList
+            .map((name: string, index: number) =>
+              openBracket === '{'
+                ? `${declare(obj)} ${name} = E.internal['${identifiers[obj]}'].${name}`
                 : rewriteListDestructure(name, index)
             )
-            .join('\n')
-        )
-      })
-      // 🚀 Any non-desctruring let/const just gets ommited!
-      text = text.replace(/(var)((\w|\s|,|\[|\])*)(=)/g, '$2 = ')
-    }
-    E.internal.log.append(E.string(text))
+            .join('\n');
+          text = text.replace(local, replacement);
+        });
+        // 🚀 Any non-desctructuring let/const just gets omitted!
+        text = text.replace(/(var)((\w|\s|,|\[|\])*)(=)/g, '$2 = ');
+      }
+      E.internal.log.append(E.string(text));
 
-    global.E = E
-    global.vscode = vscode
-    global.commands = commands
-    let result = (1, eval)(text)
+      // Expose globals for evaluation.
+      (global as any).E = E;
+      (global as any).vscode = vscode;
+      const result: any = eval(text);
 
-    E.internal.log.append('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n')
-    E.internal.log.append(E.string(result))
+      E.internal.log.append('\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n');
+      E.internal.log.append(E.string(result));
 
-    let functionNames = text
-      .replace(/\s*/g, '')
-      ?.match(/function\s*[^\)]*/g)
-      ?.forEach(x => {
-        let args = x?.split('(')[1]?.split(',')
-        let name = x?.match(/function\s*([^\(]*)/)[1]
-        if (args?.includes('E')) commands[name] = (1, eval)(name)
-      })
+      text
+        .replace(/\s*/g, '')
+        ?.match(/function\s*[^\)]*/g)
+        ?.forEach((x: string) => {
+          const args = x.split('(')[1]?.split(',');
+          const nameMatch = x.match(/function\s*([^\(]*)/);
+          const name = nameMatch ? nameMatch[1] : '';
+          if (args?.includes('E')) {
+            commands[name] = eval.call(null, name);
+          }
+        });
 
-    if (currentPrefixArgument) {
-      E.insert(`\n${E.string(result)}`)
-      return
-    }
+      if (currentPrefixArgument) {
+        E.insert(`\n${E.string(result)}`);
+        return;
+      }
 
-    E.internal.log.append(echoableLeftSide) // ! remove
+      E.internal.log.append(echoableLeftSide); // ! remove
 
-    // Text with await tries to do its own echoing above.
-    if (text.includes('await')) return
+      // Text with await tries to do its own echoing above.
+      if (text.includes('await')) return;
 
-    // E.g., for a side-effectful operation, like setting a var?
-    // The use of `echoableLeftSide` means if text is `var l = r` then output the value of `l` .
-    // The use of (parens) is for object literals: {x, y} is a block; ({x, y}) is an object literal.
-    if (echoableLeftSide) {
-      E.internal.echoFunction((1, eval)(`(${echoableLeftSide})`))
-      return
-    }
+      // E.g., for a side-effectful operation, like setting a var?
+      // The use of `echoableLeftSide` means if text is `var l = r` then output the value of `l`.
+      // The use of (parens) is for object literals: {x, y} is a block; ({x, y}) is an object literal.
+      if (echoableLeftSide) {
+        E.internal.echoFunction(globalEval(`(${echoableLeftSide})`));
+        return;
+      }
 
-    if (result === undefined || E.string(result) === '{}') return
+      if (result === undefined || E.string(result) === '{}') return;
 
-    E.internal.echoFunction(result)
-  }
+      E.internal.echoFunction(result);
+    };
+  };
 
   // ================================================================================
 
@@ -1605,69 +1721,88 @@ module.exports = vscode => {
    *
    * See also: https://alhassy.com/making-vscode-itself-a-java-repl
    */
-  E.REPL = config => {
+  interface REPLConfig {
+    command: string;
+    stdout?: (result: string, logger?: vscode.OutputChannel) => string | null;
+    stderr?: (err: string) => string | null;
+    prompt?: string;
+    errorMarkers?: RegExp[];
+    echo?: (obj: any, prefix?: string) => void;
+    alterInput?: (code: string) => string;
+  }
 
-    let { command, stdout, stderr, prompt, errorMarkers, echo, alterInput } = config
+  interface REPL {
+    (E: any): Promise<void>;
+  }
 
-    let [cmd, ...args] = command.split(' ')
-    stdout = stdout || (result => result)
+  E.REPL = (config: REPLConfig): REPL => {
+    let { command, stdout, stderr, prompt, errorMarkers, echo, alterInput } = config;
+
+    let [cmd, ...args] = command.split(' ');
+    stdout = stdout || ((result: string): string => result);
     // `stderr` intentionally left null when not provided.
     // `prompt` intentionally left null when not provided.
-    errorMarkers = errorMarkers || []
-    echo = echo || ((obj, prefix = '⮕ ') => E.overlay(`${prefix}${obj} `))
-    alterInput = alterInput || (code => `${code} \n`)
-    let { spawn } = require('child_process')
-    let logger = vscode.window.createOutputChannel(`easy - extensibiliity: ${cmd} `)
-    let repl = spawn(cmd, args)
+    errorMarkers = errorMarkers || [];
+    echo = echo || ((obj: any, prefix: string = '⮕ '): void => E.overlay(`${prefix}${obj} `));
+    alterInput = alterInput || ((code: string): string => `${code} \n`);
+    let { spawn } = require('child_process');
+    const crypto = require("crypto");
+    let logger: vscode.OutputChannel = vscode.window.createOutputChannel(`easy-extensibiliity: ${cmd} `);
+    let repl = spawn(cmd, args);
 
-    repl.stderr.on('data', data => {
-      let err = data.toString()
-      logger.append(err)
-      let msg = stderr ? stderr(err) : (err.match(errorMarkers[0] || '(.*Error.*)')[1])
-      if (msg) echo(msg, '🚫 ')
-    })
+    repl.stderr.on('data', (data: Buffer) => {
+      let err: string = data.toString();
+      logger.append(err);
+      //@ts-ignore
+      let msg: string | null = stderr ? stderr(err) : (err.match(errorMarkers[0] || '(.*Error.*)')?.at(1) ?? err);
+      //@ts-ignore
+      if (msg) echo(msg, '🚫 ');
+    });
 
-    repl.stdout.on('data', data => {
-      let result = data.toString()
-      logger.append(result)
-      result = result.trim()
+    repl.stdout.on('data', (data: Buffer) => {
+      let result: string = data.toString();
+      logger.append(result);
+      result = result.trim();
 
       if (prompt) {
-        if (result.match(prompt)) return
-        result = result.replace(prompt, '')
+        if (result.match(prompt)) return;
+        result = result.replace(prompt, '');
       }
-      if (!result.length) return
+      if (!result.length) return;
 
       // If this repl has no stdout channel, so let's fake it.
       if (errorMarkers?.some(err => result.match(err))) {
-        echo(`🚫 Error: Look at the “Output” pane below 🚫`)
-        E.message(`Press “Cmd + J” to close the bottom - most pane.`)
-        logger.show()
-        return
+        //@ts-ignore
+        echo(`🚫 Error: Look at the "Output" pane below 🚫`);
+        E.message(`Press "Cmd + J" to close the bottom-most pane.`);
+        logger.show();
+        return;
       }
 
-      let msg = stdout(result, logger)
-      if (msg) echo(msg)
-    })
+      //@ts-ignore
+      let msg: string | null = stdout(result, logger);
+      //@ts-ignore
+      if (msg) echo(msg);
+    });
 
     // Evaluate a selected expression, otherwise move cursor to end of line and evaluate entire line.
     // Then show value in an overlay ---after the selection, or end of line.
-    let interactive = async E => {
-      let code = await E.selectionOrEntireLineEOL()
-      code = alterInput(code)
-      logger.append(code)
-      repl.stdin.write(code)
-    }
+    let interactive: REPL = async (E) => {
+      let code: string = await E.selectionOrEntireLineEOL();
+      code = alterInput ? alterInput(code) : code;
+      logger.append(code);
+      repl.stdin.write(code);
+    };
 
-    return interactive
-  }
+    return interactive;
+  };
 
   /** Get the language identifier, as a string, of the currently active text editor.
    *
    * For example, in a JavaScript file this command yields `javascript`. */
-  E.currentLanguage = () => vscode.window.activeTextEditor.document.languageId
+  E.currentLanguage = () => vscode.window.activeTextEditor?.document.languageId
 
   // ================================================================================
 
-  return E
+  return E;
 }

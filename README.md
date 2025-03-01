@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- logo=Gnu-Emacs  ~~~ a nice big `E` ;-) !-->
-<a href="https://marketplace.visualstudio.com/items?itemName=alhassy.easy-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.2.11-informational?logo=javascript"></a>
+<a href="https://marketplace.visualstudio.com/items?itemName=m1self.facil-extensibility"><img src="https://img.shields.io/badge/easy--extensibility-1.2.14-informational?logo=javascript"></a>
 
 <span>
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GNU_3-informational?logo=read-the-docs"></a>
@@ -9,13 +9,10 @@
 <a href="https://github.com/alhassy/easy-extensibility/issues"><img src="https://img.shields.io/badge/contributions-welcome-green?logo=nil"></a>
 </span>
 
-<a href="https://alhassy.github.io/"><img src="https://img.shields.io/badge/author-musa_al--hassy-purple?logo=nintendo-3ds"></a>
-<a href="https://www.buymeacoffee.com/alhassy"><img src="https://img.shields.io/badge/-buy_me_a%C2%A0coffee-gray?logo=buy-me-a-coffee"></a>
-
-![Logo](graphics/logo.png)
+![Logo](graphics/logo.jpg)
 </div>
 
-#  `easy-extensibility`
+#  `facil-extensibility`
 
 Extend VSCode without the ceremony of making a full extension! Just write your code anywhere and it'll be part of VSCode!
 
@@ -39,7 +36,7 @@ Extend VSCode without the ceremony of making a full extension! Just write your c
   +  Use `shift+cmd+E` to insert the result onto the next line.
 - New keybinding: `cmd+H` to provide a command pallet for user-defined commands using this extension.
   <!-- + Use `shift+cmd+H` to pass a so-called *prefix argument*. -->
-- The *easy-extensibility Extension API*, or “E API”, which acts as a high-level user-friendly alterative to the default *vscode Extension API*.
+- The *facil-extensibility Extension API*, or “E API”, which acts as a high-level user-friendly alterative to the default *vscode Extension API*.
 
 #### Accessibility
 - 🚴 Open the tutorial to learn more about using `cmd+E` by invoking `cmd+h tutorial`
@@ -132,7 +129,7 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 <!-- Users appreciate release notes as you update your extension.
 
-All notable changes to the "easy-extensibility" extension will be documented in this file.
+All notable changes to the "facil-extensibility" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
@@ -144,7 +141,7 @@ Initial release; provides the `Hello World` command from the `cmd+shift+P` palle
 
 - New keybinding: `cmd+E` to evaluate a selection of JavaScript, or the entirety of the current line.
 - New keybinding: `cmd+H` to provide a command pallet for user-defined commands using this extension.
-- The *easy-extensibility Extension API*, or “E API”, which acts as a high-level user-friendly alterative to the default *vscode Extension API*.
+- The *facil-extensibility Extension API*, or “E API”, which acts as a high-level user-friendly alterative to the default *vscode Extension API*.
 
 Also,
 - To learn about “saving reusable functions and having them load automatically”, please invoke `cmd+h find users init.js file, or provide a template`
